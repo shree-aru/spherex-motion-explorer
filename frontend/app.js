@@ -511,6 +511,10 @@ function loadIrsaReferenceImage(){
   // Aladin Lite v3: displayFITS(url, layerName, successCallback, errorCallback)
   a.displayFITS(url, 'irsa-reference', ()=>{
     if(fallback){fallback.hidden=true;}
+    // The cutout covers ~2x the requested field; frame the view on the field
+    // itself so the image fills the viewport with context around it.
+    a.gotoRaDec(ra,dec);
+    a.setFov(Math.min(fov,60)/60);
     setAtlasStatus('ok','✓ AllWISE W1 · 3.4 µm · mid-infrared · IRSA — stars glow here');
   }, ()=>{
     if(fallback){fallback.hidden=false;}

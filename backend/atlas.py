@@ -107,7 +107,7 @@ def atlas_fits(ra: float, dec: float, fov_arcmin: float, survey: str = 'wise') -
     # Docs example: 03/0390/0390p605_ac51/0390p605_ac51-w1-int-3.fits
     tile_url = (f'{IBE_BASE}/data/wise/allwise/p3am_cdd/'
                 f"{coadd_id[:2]}/{coadd_id[:4]}/{coadd_id}/{coadd_id}-w{BAND}-int-3.fits")
-    size_deg = min(max(fov_arcmin / 60.0 * 1.2, 0.05), 1.3)
+    size_deg = min(max(fov_arcmin / 60.0 * 2.0, 0.1), 1.25)
     cutout_url = tile_url + '?' + urlencode({'center': f'{ra:.6f},{dec:.6f}', 'size': f'{size_deg:.6f}'})
     tile_bytes = _download_cutout(cutout_url)
     if tile_bytes[:2] == b'\x1f\x8b':  # IBE serves gzip-compressed FITS cutouts
