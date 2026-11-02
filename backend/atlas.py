@@ -1,11 +1,11 @@
-"""Reference-atlas imagery from IRSA (no CDS dependency).
+"""Reference-atlas imagery from IRSA AllWISE coadds (no CDS dependency).
 
 All-sky HiPS tile servers (CDS alasky) are unreachable on some networks, so
-the reference view falls back to all-sky *atlas images* served by IRSA itself:
-AllWISE atlas tiles (~1.5 deg, mid-infrared) and 2MASS atlas tiles (8.5 arcmin,
-near-infrared).  The backend downloads the tile, extracts a WCS-preserved
-cutout around the target, and serves a compact FITS that Aladin Lite can
-display directly as an aligned background layer.
+the reference view uses the AllWISE coadded atlas images served by IRSA's
+Image Backend (IBE): ~1.5 deg W1-W4 coadds covering the entire sky.  The
+backend locates the coadd tile containing the target via the IBE search API,
+downloads an official IBE cutout, and serves a compact WCS-preserved FITS
+that Aladin Lite displays directly as an aligned background layer.
 """
 from __future__ import annotations
 
@@ -19,150 +19,131 @@ from urllib.parse import urlencode
 import httpx
 import numpy as np
 
-from .archive import metadata_number
-
-SIA_URL = 'https://irsa.ipac.caltech.edu/SIA'
-IBE_SIA_URL = 'https://irsa.ipac.caltech.edu/ibe/sia'
-MAX_TILE_BYTES = 90_000_000
+IBE_BASE = 'https://irsa.ipac.caltech.edu/ibe'
+MAX_TILE_BYTES = 60_000_000
 MAX_OUTPUT_PX = 900
+BAND = '1'  # W1 (3.4 um): deepest AllWISE band, stellar continuum
 
 
 class AtlasError(Exception):
     pass
 
 
-@lru_cache(maxsize=24)
-def _sia_records(collection: str, ra: float, dec: float, radius_deg: float, use_ibe: bool):
-    params = {
-        'POS': f'CIRCLE {ra:.8f} {dec:.8f} {radius_deg:.8f}',
-        'RESPONSEFORMAT': 'CSV', 'MAXREC': '40', 'DPTYPE': 'image',
-    }
-    base = IBE_SIA_URL if use_ibe else SIA_URL
-    if use_ibe:
-        params['collection'] = collection
-        params['LEVEL'] = 'atl'
-    else:
-        params['COLLECTION'] = collection
+@lru_cache(maxsize=32)
+def _ibe_search(ra: float, dec: float):
+    """Locate the AllWISE coadd tile(s) containing a position."""
+    params = {'POS': f'{ra:.6f},{dec:.6f}', 'RESPONSEFORMAT': 'csv'}
+    url = f'{IBE_BASE}/search/wise/allwise/p3am_cdd'
     last_exc = None
-    for attempt in range(2):
+    for attempt in range(3):
         try:
             with httpx.Client(timeout=httpx.Timeout(60.0, connect=15.0), follow_redirects=False) as client:
-                response = client.get(base, params=params)
+                response = client.get(url, params=params)
                 response.raise_for_status()
                 payload = response.text
-            header = next(csv.reader(io.StringIO(payload.lstrip('\ufeff'))), [])
-            if 'access_url' not in header:
+            if '<VOTABLE' in payload[:200]:
+                marker = 'value="ERROR"'
+                if marker in payload:
+                    start = payload.find(marker)
+                    excerpt = payload[start:payload.find('</INFO>', start)]
+                    raise AtlasError(f'IRSA IBE rejected the reference query: {excerpt[:160]}')
                 return []
-            return [row for row in csv.DictReader(io.StringIO(payload.lstrip('\ufeff')))
-                    if (row.get('access_url') or '').strip()]
+            rows = [row for row in csv.DictReader(io.StringIO(payload.lstrip('\ufeff')))
+                    if row.get('coadd_id') and row.get('band') == BAND]
+            return rows
         except httpx.HTTPError as exc:
             last_exc = exc
-            time.sleep(1.5 * (attempt + 1))
-    raise AtlasError(f'IRSA SIA unreachable for {collection}: {type(last_exc).__name__}')
+            time.sleep(2.0 * (attempt + 1))
+    raise AtlasError(f'IRSA IBE unreachable: {type(last_exc).__name__}') from last_exc
 
 
-def _nearest_tile(rows: list[dict], ra: float, dec: float) -> dict | None:
+def _pick_tile(rows: list[dict], ra: float, dec: float) -> dict:
+    """Nearest coadd centre wins (tiles overlap at the edges)."""
     best, best_sep = None, None
     for row in rows:
-        s_ra, s_dec = metadata_number(row, 's_ra'), metadata_number(row, 's_dec')
-        if s_ra is None or s_dec is None:
+        try:
+            c_ra, c_dec = float(row['crval1']), float(row['crval2'])
+        except (KeyError, ValueError, TypeError):
             continue
-        d_ra = (s_ra - ra) * math.cos(math.radians(dec))
-        sep = math.hypot(d_ra, s_dec - dec)
+        d_ra = (c_ra - ra) * math.cos(math.radians(dec))
+        sep = math.hypot(d_ra, c_dec - dec)
         if best_sep is None or sep < best_sep:
             best, best_sep = row, sep
+    if not best:
+        raise AtlasError('No usable AllWISE coadd tile in the IRSA response.')
     return best
 
 
-def _download(url: str) -> bytes:
+def _download_cutout(url: str) -> bytes:
     last_exc = None
     for attempt in range(3):
         try:
             with httpx.Client(timeout=httpx.Timeout(180.0, connect=15.0), follow_redirects=False) as client:
                 with client.stream('GET', url) as response:
                     response.raise_for_status()
-                    total = 0
-                    parts = []
+                    total, parts = 0, []
                     for chunk in response.iter_bytes():
                         total += len(chunk)
                         if total > MAX_TILE_BYTES:
-                            raise AtlasError('Reference tile exceeds the size limit.')
+                            raise AtlasError('Reference cutout exceeds the size limit.')
                         parts.append(chunk)
                     return b''.join(parts)
         except httpx.HTTPError as exc:
             last_exc = exc
             time.sleep(2.0 * (attempt + 1))
-    raise AtlasError(f'Reference tile download failed: {type(last_exc).__name__}') from last_exc
+    raise AtlasError(f'Reference cutout download failed: {type(last_exc).__name__}') from last_exc
 
 
 @lru_cache(maxsize=16)
 def atlas_fits(ra: float, dec: float, fov_arcmin: float, survey: str = 'wise') -> bytes:
-    """Return a compact WCS-preserved FITS cutout of reference imagery."""
-    surveys = {
-        # AllWISE Atlas coadds: ~1.56 deg tiles, W1-W4 mid-infrared.
-        'wise': {'collection': 'allwise', 'use_ibe': True, 'max_fov': 60.0},
-        # 2MASS Atlas tiles: ~8.5 arcmin, J/H/K near-infrared.
-        '2mass': {'collection': '2mass', 'use_ibe': True, 'max_fov': 7.0},
-    }
-    if survey not in surveys:
-        raise AtlasError(f'Unknown reference survey {survey!r}.')
-    spec = surveys[survey]
-    if fov_arcmin > spec['max_fov']:
-        raise AtlasError(f'{survey.upper()} reference tiles support fields up to '
-                         f"{spec['max_fov']:.0f}' ; narrow the field of view.")
-    radius_deg = max(0.05, (fov_arcmin / 60.0) * 0.75)
-    rows = _sia_records(spec['collection'], round(ra, 6), round(dec, 6),
-                        round(radius_deg, 6), spec['use_ibe'])
-    if not rows and spec['use_ibe'] is True:
-        rows = _sia_records(spec['collection'], round(ra, 6), round(dec, 6),
-                            round(radius_deg, 6), False)
+    """Compact WCS-preserved display FITS of AllWISE imagery around a target."""
+    if fov_arcmin > 60.0:
+        raise AtlasError('Reference imagery supports fields up to 60 arcmin; narrow the field of view.')
+    rows = _ibe_search(round(ra, 6), round(dec, 6))
     if not rows:
-        raise AtlasError(f'No {survey.upper()} atlas imagery covers this field in IRSA.')
-    tile = _nearest_tile(rows, ra, dec)
-    if not tile:
-        raise AtlasError('No usable reference tile record returned.')
-    tile_url = (tile.get('access_url') or '').strip()
-    if not tile_url.lower().endswith(('.fits', '.fits.gz')):
-        raise AtlasError('The returned reference record is not a FITS image.')
-    tile_bytes = _download(tile_url)
-    return _make_cutout(tile_bytes, ra, dec, fov_arcmin, survey)
+        raise AtlasError('No AllWISE coadd tile covers this position in IRSA.')
+    tile = _pick_tile(rows, ra, dec)
+    coadd_id = tile['coadd_id'].strip()
+    # Docs example: 03/0390/0390p605_ac51/0390p605_ac51-w1-int-3.fits
+    tile_url = (f'{IBE_BASE}/data/wise/allwise/p3am_cdd/'
+                f"{coadd_id[:2]}/{coadd_id[:4]}/{coadd_id}/{coadd_id}-w{BAND}-int-3.fits")
+    size_deg = min(max(fov_arcmin / 60.0 * 1.2, 0.05), 1.3)
+    cutout_url = tile_url + '?' + urlencode({'center': f'{ra:.6f},{dec:.6f}', 'size': f'{size_deg:.6f}'})
+    tile_bytes = _download_cutout(cutout_url)
+    if tile_bytes[:2] == b'\x1f\x8b':  # IBE serves gzip-compressed FITS cutouts
+        import gzip
+        tile_bytes = gzip.decompress(tile_bytes)
+    return _make_display_fits(tile_bytes, ra, dec, fov_arcmin)
 
 
-def _make_cutout(tile_bytes: bytes, ra: float, dec: float, fov_arcmin: float,
-                 survey: str) -> bytes:
+def _make_display_fits(tile_bytes: bytes, ra: float, dec: float, fov_arcmin: float) -> bytes:
     from astropy.io import fits
-    from astropy.nddata import Cutout2D
     from astropy.wcs import WCS
     try:
         with fits.open(io.BytesIO(tile_bytes), memmap=False, lazy_load_hdus=False) as hdul:
             sci = hdul[0] if hdul[0].data is not None else hdul[1]
             data = np.asarray(sci.data, dtype=np.float32)
-            wcs = WCS(sci.header, hdul).celestial if hdul[0].data is None else WCS(sci.header).celestial
-            bunit = str(sci.header.get('BUNIT', '')).strip()
+            header_in = sci.header
     except (OSError, ValueError) as exc:
-        raise AtlasError(f'Cannot read reference tile: {type(exc).__name__}') from exc
+        raise AtlasError(f'Cannot read the reference cutout: {type(exc).__name__}') from exc
     if data.ndim != 2:
-        raise AtlasError('Reference tile is not a 2-D image.')
+        raise AtlasError('Reference cutout is not a 2-D image.')
+    valid = np.isfinite(data)
+    if not valid.any():
+        raise AtlasError('The reference cutout contains no usable pixels.')
+    lo, hi = np.percentile(data[valid], [1, 99.4])
+    if not np.isfinite(hi - lo) or hi <= lo:
+        hi = lo + 1
+    scaled = np.clip((data - lo) / (hi - lo), 0, 1)
+    out = (np.arcsinh(9 * scaled) / math.asinh(9) * 255).astype(np.uint8)
     try:
-        cut = Cutout2D(data, (ra, dec), (fov_arcmin / 60.0, fov_arcmin / 60.0), wcs=wcs)
-    except (ValueError, IndexError) as exc:
-        raise AtlasError('Target position falls outside the reference tile.') from exc
-    step = max(1, int(math.ceil(max(cut.data.shape) / MAX_OUTPUT_PX)))
-    small = cut.data[::step, ::step]
-    small_wcs = cut.wcs[::step, ::step]
-    valid = np.isfinite(small)
-    if valid.any():
-        lo, hi = np.percentile(small[valid], [1, 99.4])
-        if not np.isfinite(hi - lo) or hi <= lo:
-            hi = lo + 1
-        scaled = np.clip((small - lo) / (hi - lo), 0, 1)
-        out = (np.arcsinh(9 * scaled) / math.asinh(9) * 255).astype(np.uint8)
-    else:
-        out = np.zeros_like(small, dtype=np.uint8)
-    header = small_wcs.to_header()
+        wcs = WCS(header_in).celestial
+        header = wcs.to_header()
+    except Exception:
+        header = fits.Header()
     header['BUNIT'] = 'display-stretch (0-255 asinh)'
-    header['ORIGBUNIT'] = bunit or 'unknown'
-    header['ORIGIN'] = f'IRSA {survey.upper()} atlas via SPHEREx Motion Explorer'
+    header['ORIGIN'] = 'IRSA AllWISE coadd via SPHEREx Motion Explorer'
+    header['WAVELEN'] = (3.4, 'W1 effective wavelength [um]')
     buffer = io.BytesIO()
     fits.PrimaryHDU(out, header=header).writeto(buffer, overwrite=True)
     return buffer.getvalue()
