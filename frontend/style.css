@@ -48,3 +48,24 @@
 .atlas-header.compact .atlas-survey-row{display:flex;align-items:center;gap:6px;font-size:9px;color:#a8bfd0;margin:0}
 .atlas-header.compact select{height:26px;width:170px;font-size:9px;background:#0c1621;border:1px solid #33495c;color:#dae8ef;border-radius:3px;padding:0 4px}
 .atlas-header.compact .muted-button{padding:4px 8px;font-size:9px}
+/* v0.5.1: frame zoom/pan + structured atlas pill */
+.img-box{width:100%;height:100%;position:relative;transform-origin:center center;transition:transform .18s ease-out}
+.img-box .science-image{width:100%;height:100%;object-fit:contain}
+.zoom-toolbar{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+.hud-button.zoom{width:30px;height:28px;padding:0;font:13px var(--mono);display:grid;place-items:center}
+.atlas-header.compact{left:52px;right:auto;width:fit-content;max-width:560px;flex-direction:column;align-items:stretch;gap:6px;padding:7px 9px;bottom:44px;top:auto}
+.atlas-header.compact .atlas-title-row{flex-direction:row;align-items:baseline;gap:7px}
+.atlas-header.compact strong{font-size:10.5px}
+.atlas-header.compact small{font-size:9px;color:#8fa6b6}
+.atlas-status{font-size:9px;color:#9db4c4}
+.atlas-status.ok{color:#8fe0b7}
+.atlas-status.error{color:#f0a6a8}
+.atlas-status.loading{color:#a9d8f2}
+.atlas-header.compact .atlas-controls-row{display:flex;align-items:center;gap:6px}
+.atlas-header.compact .atlas-survey-row{display:flex;align-items:center;gap:6px;font-size:9px;color:#a8bfd0;margin:0}
+.atlas-header.compact select{height:26px;width:230px;font-size:9px;background:#0c1621;border:1px solid #33495c;color:#dae8ef;border-radius:3px;padding:0 4px}
+.atlas-min{background:#152a3c;border:1px solid #3a546a;color:#a9c6d9;border-radius:3px;width:20px;height:20px;font:10px var(--mono);flex:none;position:absolute;top:5px;left:5px}
+.atlas-header.compact{padding-left:30px}
+.atlas-header.compact.min .atlas-controls-row{display:none}
+.atlas-header.compact.min .atlas-title-row small.atlas-status{display:none}
+.atlas-header.compact.min{max-width:230px}

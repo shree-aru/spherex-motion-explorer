@@ -17,6 +17,7 @@ let state = {
   sequenceIndex:0, pendingView:null, coverage:null,
   spectrum:null, spectrumBusy:false, spectrumCounter:0,
   catalog:null, catalogBusy:false, catalogVisible:false,
+  zoom:1, panX:0, panY:0, atlasMinimized:false,
 };
 const DETECTOR_COLORS={D1:'#7fd4ff',D2:'#8affc1',D3:'#ffe066',D4:'#ffab70',D5:'#ff8fa3',D6:'#c9a6ff',Unknown:'#9aa7b5'};
 function el(tag,klass,text){const n=document.createElement(tag);if(klass)n.className=klass;if(text!==undefined)n.textContent=text;return n;}
@@ -436,6 +437,7 @@ function showRendered(){
   $('emptyStage').hidden=true;$('imageError').hidden=true;pane.hidden=false;
   pane.classList.toggle('split',state.mode==='split'&&!!state.b);
   b.hidden=!(state.mode==='split'&&state.b);
+  $('imgBoxB').hidden=!(state.mode==='split'&&state.b);
   if(state.mode==='difference'){
     a.src=state.images.difference||state.images.a;a.alt='B minus A signed pixel residual visualization';
     $('imageLegend').textContent='AMBER: B brighter · CYAN: A brighter · exploratory residual';
@@ -490,27 +492,61 @@ const ATLAS_SURVEY_STATE={failed:new Set()};
 function currentAtlasSource(){
   const sel=$('atlasSource');return sel?sel.value:'irsawise';
 }
+function setAtlasStatus(kind, message){
+  const el=$('atlasStatus');if(!el)return;
+  el.textContent=message;
+  el.className='atlas-status '+kind;
+}
 function loadIrsaReferenceImage(){
   // IRSA-backed reference FITS: served by our own backend, so it works on any
   // network that can reach this app (no CDS dependency).
   const fallback=$('atlasFallback'), text=$('atlasFallbackText'), retry=$('atlasRetry');
   const {ra,dec,fov}=coord();
-  const ref=currentAtlasSource()==='irsa2mass'?'2mass':'wise';
-  const effFov=Math.min(fov, ref==='2mass'?7:60);
   if(fallback){fallback.hidden=true;}
   const a=state.atlas;
   if(!a){return;}
   a.removeLayers();
-  const url=`/api/atlas_image?ra=${ra}&dec=${dec}&fov=${effFov}&ref=${ref}`;
+  setAtlasStatus('loading','Loading AllWISE W1 (3.4 µm) from IRSA…');
+  const url=`/api/atlas_image?ra=${ra}&dec=${dec}&fov=${Math.min(fov,60)}&ref=wise`;
   // Aladin Lite v3: displayFITS(url, layerName, successCallback, errorCallback)
   a.displayFITS(url, 'irsa-reference', ()=>{
     if(fallback){fallback.hidden=true;}
+    setAtlasStatus('ok','✓ AllWISE W1 · 3.4 µm · mid-infrared · IRSA — stars glow here');
   }, ()=>{
     if(fallback){fallback.hidden=false;}
     if(text)text.textContent='Reference imagery is temporarily unavailable from IRSA (the archive did not respond). Press Load to retry — the SPHEREx data tools are unaffected.';
     if(retry)retry.hidden=false;
+    setAtlasStatus('error','✗ IRSA did not respond — press Load to retry');
   });
   a.gotoRaDec(ra,dec);a.setFov(Math.min(fov,60)/60);
+}
+function switchAtlasSource(){
+  const src=currentAtlasSource();
+  if(!state.atlas){state.atlas=null;updateAtlas();return;}
+  if(src==='irsawise'){loadIrsaReferenceImage();return;}
+  // CDS HiPS source: probe reachability first (the backend shares the same
+  // network egress as this browser). Blocked networks fall back to IRSA
+  // instead of silently keeping the previous image.
+  setAtlasStatus('loading','Checking CDS reachability…');
+  const host=src.startsWith('http')?'alasky.cds.unistra.fr':'alasky.cds.unistra.fr';
+  fetch(`/api/net_check?host=${host}`,{headers:{Accept:'application/json'}})
+    .then(r=>r.json())
+    .then(({reachable})=>{
+      if(!reachable){
+        setAtlasStatus('error','✗ CDS tile servers are unreachable on this network — loaded AllWISE W1 · IRSA instead');
+        loadIrsaReferenceImage();
+        return;
+      }
+      setAtlasStatus('loading','CDS reachable — loading HiPS survey…');
+      try{state.atlas.removeLayers();}catch{}
+      try{
+        state.atlas.setBaseImageLayer(src);
+        const {ra,dec,fov}=coord();state.atlas.gotoRaDec(ra,dec);state.atlas.setFov(fov/60);
+        $('atlasFallback').hidden=true;
+        setAtlasStatus('loading','HiPS loading from CDS — tiles stream in gradually');
+      }catch(e){setAtlasStatus('error','✗ Could not start the CDS survey');}
+    })
+    .catch(()=>{setAtlasStatus('error','✗ Reachability check failed — loaded AllWISE W1 · IRSA instead');loadIrsaReferenceImage();});
 }
 function updateAtlas(){
   const {ra,dec,fov}=coord();
@@ -545,18 +581,6 @@ function updateAtlas(){
     else if(waited>10000){clearInterval(state.atlasWaiter);state.atlasWaiter=null;
       showFallback('Atlas engine did not start. Check that /vendor/aladin.js is served, then retry.',true);}
   },250);
-}
-function switchAtlasSource(){
-  const src=currentAtlasSource();
-  if(!state.atlas){state.atlas=null;updateAtlas();return;}
-  if(src==='irsawise'||src==='irsa2mass'){loadIrsaReferenceImage();return;}
-  // CDS HiPS survey: only works on networks that can reach CDS tile servers.
-  try{state.atlas.removeLayers();}catch{}
-  try{
-    state.atlas.setBaseImageLayer(src);
-    const {ra,dec,fov}=coord();state.atlas.gotoRaDec(ra,dec);state.atlas.setFov(fov/60);
-    $('atlasFallback').hidden=true;
-  }catch(e){$('atlasFallback').hidden=false;}
 }
 function switchTab(tab){
   state.tab=tab;const atlas=tab==='atlas';
@@ -743,13 +767,14 @@ function visibleOverlayTargets(){
   return imgs;
 }
 function syncOverlayCanvas(img){
-  const pane=$('imagePane');
-  let canvas=pane.querySelector(`canvas[data-for="${img.id}"]`);
-  if(!canvas){canvas=document.createElement('canvas');canvas.className='overlay-canvas';canvas.dataset.for=img.id;pane.append(canvas);}
+  // The canvas lives inside the frame's .img-box wrapper, so zoom/pan transforms
+  // applied to the wrapper scale image and overlay together.
+  const box=img.parentElement;
+  let canvas=box.querySelector(`canvas[data-for="${img.id}"]`);
+  if(!canvas){canvas=document.createElement('canvas');canvas.className='overlay-canvas';canvas.dataset.for=img.id;box.append(canvas);}
   const w=img.clientWidth,h=img.clientHeight;
   if(!w||!h||!img.naturalWidth){canvas.hidden=true;return null;}
-  canvas.style.left=img.offsetLeft+'px';
-  canvas.style.top=img.offsetTop+'px';
+  canvas.style.position='absolute';canvas.style.left='0';canvas.style.top='0';
   canvas.style.width=w+'px';canvas.style.height=h+'px';
   if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
   canvas.hidden=false;
@@ -812,6 +837,45 @@ function clearCatalogOverlay(){
   const pane=$('imagePane');
   if(pane)pane.querySelectorAll('canvas.overlay-canvas').forEach(c=>c.remove());
 }
+/* ---- science-frame zoom & pan (image + Gaia overlay scale together) ---- */
+function applyFrameTransform(){
+  const t=`translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+  for(const id of ['imgBoxA','imgBoxB']){
+    const box=$(id);if(!box)continue;
+    box.style.transform=t;
+  }
+  $('viewportResolution')?.replaceChildren(`FOV ${coord().fov}′ × ${coord().fov}′${state.zoom>1?` · zoom ${state.zoom.toFixed(1)}×`:''}`);
+}
+function setFrameZoom(z, keepPan=true){
+  const nz=Math.min(6, Math.max(1, z));
+  if(!keepPan || nz===1){state.panX=0;state.panY=0;}
+  state.zoom=nz;applyFrameTransform();
+}
+function initFrameZoom(){
+  $('zoomIn').addEventListener('click',()=>setFrameZoom(state.zoom*1.4));
+  $('zoomOut').addEventListener('click',()=>setFrameZoom(state.zoom/1.4));
+  $('zoomReset').addEventListener('click',()=>setFrameZoom(1,false));
+  const stage=$('frameStage');
+  stage.addEventListener('wheel',event=>{
+    if($('imagePane').hidden)return;
+    event.preventDefault();
+    setFrameZoom(state.zoom*(event.deltaY<0?1.15:1/1.15));
+  },{passive:false});
+  let dragging=null;
+  stage.addEventListener('pointerdown',event=>{
+    if($('imagePane').hidden||state.zoom<=1)return;
+    dragging={x:event.clientX,y:event.clientY,px:state.panX,py:state.panY};
+    stage.setPointerCapture(event.pointerId);
+  });
+  stage.addEventListener('pointermove',event=>{
+    if(!dragging)return;
+    state.panX=dragging.px+(event.clientX-dragging.x);
+    state.panY=dragging.py+(event.clientY-dragging.y);
+    applyFrameTransform();
+  });
+  const end=()=>{dragging=null;};
+  stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);
+}
 function init(){
   const qs=new URLSearchParams(location.search);
   if(qs.has('ra')&&qs.has('dec')){
@@ -856,11 +920,14 @@ function init(){
   $('shareBtn').addEventListener('click',copyView);$('downloadPng').addEventListener('click',exportPng);
   $('atlasRetry').addEventListener('click',()=>{$('atlasFallback').hidden=true;loadIrsaReferenceImage();});
   $('atlasSource').addEventListener('change',switchAtlasSource);
-  $('atlasReload').addEventListener('click',()=>{
-    const src=currentAtlasSource();
-    if(src==='irsawise'||src==='irsa2mass')loadIrsaReferenceImage();
-    else switchAtlasSource();
+  $('atlasReload').addEventListener('click',()=>switchAtlasSource());
+  $('atlasMin').addEventListener('click',()=>{
+    state.atlasMinimized=!state.atlasMinimized;
+    $('atlasHeader').classList.toggle('min',state.atlasMinimized);
+    $('atlasMin').textContent=state.atlasMinimized?'▸':'▾';
+    $('atlasMin').setAttribute('aria-expanded',String(!state.atlasMinimized));
   });
+  initFrameZoom();
   document.addEventListener('keydown',event=>{
     if(['INPUT','SELECT','TEXTAREA','BUTTON'].includes(document.activeElement?.tagName))return;
     if(event.code==='Space'&&state.a&&state.b){event.preventDefault();togglePlay();}

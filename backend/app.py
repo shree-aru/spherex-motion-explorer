@@ -161,8 +161,8 @@ def catalog(ra: float, dec: float, fov: float = 9.0, survey: Literal['gaia'] = '
 
 @app.get('/api/atlas_image')
 def atlas_image(ra: float, dec: float, fov: float = 9.0,
-                ref: Literal['wise', '2mass'] = 'wise'):
-    """Compact WCS-aligned reference FITS (IRSA AllWISE/2MASS atlas) for the atlas view."""
+                ref: Literal['wise'] = 'wise'):
+    """Compact WCS-aligned reference FITS (IRSA AllWISE atlas) for the atlas view."""
     validate_coords(ra, dec, fov)
     try:
         payload = atlas_fits(round(ra, 6), round(dec, 6), round(fov, 4), ref)
@@ -171,6 +171,21 @@ def atlas_image(ra: float, dec: float, fov: float = 9.0,
     return Response(payload, media_type='application/fits',
                     headers={'Cache-Control': 'private, max-age=86400',
                              'X-Data-Source': f'NASA-IPAC-IRSA-{ref.upper()}-ATLAS'})
+
+
+@app.get('/api/net_check')
+def net_check(host: Literal['alasky.cds.unistra.fr', 'alaskybis.cds.unistra.fr'] = 'alasky.cds.unistra.fr'):
+    """Reachability probe for third-party tile hosts (same network egress as the browser)."""
+    import httpx as _httpx
+    reachable = False
+    try:
+        with _httpx.Client(timeout=_httpx.Timeout(6.0, connect=4.0), follow_redirects=False) as client:
+            probe = client.head(f'https://{host}/DSS/DSSColor/properties')
+            reachable = probe.status_code < 500
+    except _httpx.HTTPError:
+        reachable = False
+    return JSONResponse(content={'host': host, 'reachable': reachable},
+                        headers={'Cache-Control': 'no-store'})
 
 
 app.mount('/', StaticFiles(directory=ROOT / 'frontend', html=True), name='frontend')
