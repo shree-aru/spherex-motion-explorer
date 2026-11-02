@@ -39,3 +39,12 @@
 .spectrum-caveat{font-size:9.5px;color:#7a95a6;line-height:1.5;margin:8px 0 0}
 .atlas-survey-row{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:10px;color:#a8bfd0}
 .atlas-survey-row select{height:30px;width:210px;font-size:10px;background:#0c1621;border:1px solid #33495c;color:#dae8ef;border-radius:4px;padding:0 6px}
+/* Compact atlas header: single strip at top, no overlap with Aladin controls */
+.atlas-header.compact{position:absolute;top:8px;left:52px;right:8px;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;background:#0e1b29d9;border:1px solid #3a4d60;border-radius:4px;padding:5px 9px;pointer-events:auto;max-width:calc(100% - 64px)}
+.atlas-header.compact .atlas-title-row{display:flex;flex-direction:column;gap:1px;min-width:0}
+.atlas-header.compact strong{font-size:10px;color:#d3e5ef;white-space:nowrap}
+.atlas-header.compact .atlas-title-row span{font-size:9px;color:#8fa6b6;white-space:nowrap}
+.atlas-header.compact .atlas-controls-row{display:flex;align-items:center;gap:6px}
+.atlas-header.compact .atlas-survey-row{display:flex;align-items:center;gap:6px;font-size:9px;color:#a8bfd0;margin:0}
+.atlas-header.compact select{height:26px;width:170px;font-size:9px;background:#0c1621;border:1px solid #33495c;color:#dae8ef;border-radius:3px;padding:0 4px}
+.atlas-header.compact .muted-button{padding:4px 8px;font-size:9px}

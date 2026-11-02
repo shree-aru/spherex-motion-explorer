@@ -17,6 +17,7 @@ from .archive import ArchiveError, search_observations, valid_source_url, DETECT
 from .science import ScienceError, render_pair, render_sequence
 from .spectrum import extract_spectrum
 from .catalog import CatalogError, gaia_sources
+from .atlas import AtlasError, atlas_fits
 
 ROOT = Path(__file__).resolve().parents[1]
 app = FastAPI(title='SPHEREx Motion Explorer', version='0.5.0',
@@ -156,6 +157,20 @@ def catalog(ra: float, dec: float, fov: float = 9.0, survey: Literal['gaia'] = '
         raise HTTPException(502, str(exc)) from exc
     return JSONResponse(content=result, headers={'Cache-Control': 'private, max-age=1800',
                                                  'X-Data-Source': 'IRSA-TAP-Gaia-DR3'})
+
+
+@app.get('/api/atlas_image')
+def atlas_image(ra: float, dec: float, fov: float = 9.0,
+                ref: Literal['wise', '2mass'] = 'wise'):
+    """Compact WCS-aligned reference FITS (IRSA AllWISE/2MASS atlas) for the atlas view."""
+    validate_coords(ra, dec, fov)
+    try:
+        payload = atlas_fits(round(ra, 6), round(dec, 6), round(fov, 4), ref)
+    except AtlasError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return Response(payload, media_type='application/fits',
+                    headers={'Cache-Control': 'private, max-age=86400',
+                             'X-Data-Source': f'NASA-IPAC-IRSA-{ref.upper()}-ATLAS'})
 
 
 app.mount('/', StaticFiles(directory=ROOT / 'frontend', html=True), name='frontend')

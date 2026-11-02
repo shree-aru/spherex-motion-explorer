@@ -487,8 +487,30 @@ function togglePlay(){
   tick();state.clock=setInterval(tick,Number($('speedSelect').value));
 }
 const ATLAS_SURVEY_STATE={failed:new Set()};
-function currentAtlasSurvey(){
-  const sel=$('atlasSurvey');return sel?sel.value:'https://alasky.cds.unistra.fr/DSS/DSSColor';
+function currentAtlasSource(){
+  const sel=$('atlasSource');return sel?sel.value:'irsawise';
+}
+function loadIrsaReferenceImage(){
+  // IRSA-backed reference FITS: served by our own backend, so it works on any
+  // network that can reach this app (no CDS dependency).
+  const fallback=$('atlasFallback'), text=$('atlasFallbackText'), retry=$('atlasRetry');
+  const {ra,dec,fov}=coord();
+  const ref=currentAtlasSource()==='irsa2mass'?'2mass':'wise';
+  const effFov=Math.min(fov, ref==='2mass'?7:60);
+  if(fallback){fallback.hidden=true;}
+  const a=state.atlas;
+  if(!a){return;}
+  a.removeLayers();
+  const url=`/api/atlas_image?ra=${ra}&dec=${dec}&fov=${effFov}&ref=${ref}`;
+  // Aladin Lite v3: displayFITS(url, layerName, successCallback, errorCallback)
+  a.displayFITS(url, 'irsa-reference', ()=>{
+    if(fallback){fallback.hidden=true;}
+  }, ()=>{
+    if(fallback){fallback.hidden=false;}
+    if(text)text.textContent='Reference imagery is temporarily unavailable from IRSA (the archive did not respond). Press Load to retry — the SPHEREx data tools are unaffected.';
+    if(retry)retry.hidden=false;
+  });
+  a.gotoRaDec(ra,dec);a.setFov(Math.min(fov,60)/60);
 }
 function updateAtlas(){
   const {ra,dec,fov}=coord();
@@ -499,18 +521,17 @@ function updateAtlas(){
   const startInit=()=>{
     if(!window.A||!window.A.init){showFallback('Atlas engine could not be loaded.',true);return;}
     state.atlasInitializing=true;
-    const survey=currentAtlasSurvey();
-    ATLAS_SURVEY_STATE.failed.delete(survey);
     window.A.init.then(()=>{
       if(state.atlas)return;
       const a=window.A.aladin('#aladin-lite-div',{
-        survey,target:`${ra} ${dec}`,fov:fov/60,
+        target:`${ra} ${dec}`,fov:fov/60,
         showReticle:true,reticleColor:'#d7c39c',showFullscreenControl:true,
-        showLayersControl:true,showZoomControl:true,showGotoControl:false
+        showLayersControl:false,showZoomControl:true,showGotoControl:false
       });
       state.atlas=a;if(fallback)fallback.hidden=true;
-    }).catch(()=>{ATLAS_SURVEY_STATE.failed.add(survey);
-      showFallback('The atlas engine started but this survey\u2019s tile servers are not reachable from this network. Try another survey in the list above, then retry.',true);})
+      // Default to the IRSA-backed reference image: no third-party tile server needed.
+      loadIrsaReferenceImage();
+    }).catch(()=>showFallback('The atlas engine could not initialise in this browser.',true))
       .finally(()=>{state.atlasInitializing=false;});
   };
   if(window.A&&window.A.init){if(retry)retry.hidden=true;startInit();return;}
@@ -525,11 +546,17 @@ function updateAtlas(){
       showFallback('Atlas engine did not start. Check that /vendor/aladin.js is served, then retry.',true);}
   },250);
 }
-function switchAtlasSurvey(){
-  if(state.atlas){try{state.atlas.removeLayers();}catch{}
-    try{state.atlas.setBaseImageLayer(currentAtlasSurvey());$('atlasFallback').hidden=true;}catch(e){$('atlasFallback').hidden=false;}
-    return;}
-  state.atlas=null;updateAtlas();
+function switchAtlasSource(){
+  const src=currentAtlasSource();
+  if(!state.atlas){state.atlas=null;updateAtlas();return;}
+  if(src==='irsawise'||src==='irsa2mass'){loadIrsaReferenceImage();return;}
+  // CDS HiPS survey: only works on networks that can reach CDS tile servers.
+  try{state.atlas.removeLayers();}catch{}
+  try{
+    state.atlas.setBaseImageLayer(src);
+    const {ra,dec,fov}=coord();state.atlas.gotoRaDec(ra,dec);state.atlas.setFov(fov/60);
+    $('atlasFallback').hidden=true;
+  }catch(e){$('atlasFallback').hidden=false;}
 }
 function switchTab(tab){
   state.tab=tab;const atlas=tab==='atlas';
@@ -827,8 +854,13 @@ function init(){
   document.querySelectorAll('.mode-button').forEach(b=>b.addEventListener('click',()=>selectMode(b.dataset.mode)));
   document.querySelectorAll('.viewer-tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
   $('shareBtn').addEventListener('click',copyView);$('downloadPng').addEventListener('click',exportPng);
-  $('atlasRetry').addEventListener('click',()=>{$('atlasFallback').hidden=true;state.atlas=null;updateAtlas();});
-  $('atlasSurvey').addEventListener('change',switchAtlasSurvey);
+  $('atlasRetry').addEventListener('click',()=>{$('atlasFallback').hidden=true;loadIrsaReferenceImage();});
+  $('atlasSource').addEventListener('change',switchAtlasSource);
+  $('atlasReload').addEventListener('click',()=>{
+    const src=currentAtlasSource();
+    if(src==='irsawise'||src==='irsa2mass')loadIrsaReferenceImage();
+    else switchAtlasSource();
+  });
   document.addEventListener('keydown',event=>{
     if(['INPUT','SELECT','TEXTAREA','BUTTON'].includes(document.activeElement?.tagName))return;
     if(event.code==='Space'&&state.a&&state.b){event.preventDefault();togglePlay();}
