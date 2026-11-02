@@ -188,18 +188,33 @@ async function search(){
   if($('startDate').value)params.set('start_date',$('startDate').value);
   if($('endDate').value)params.set('end_date',$('endDate').value);
   try{
-    const response=await fetch('/api/observations?'+params,{headers:{Accept:'application/json'}});
-    const payload=await response.json();if(!response.ok)throw Error(payload.detail||`Archive query failed (${response.status})`);
+    let response=await fetch('/api/observations?'+params,{headers:{Accept:'application/json'}});
+    let payload=await response.json();
+    if(!response.ok)throw Error(payload.detail||`Archive query failed (${response.status})`);
     if(queryId!==state.queryCounter)return;
+    // Quick Releases cover the sky progressively: a field can legitimately have
+    // zero QR3 records while QR2 (earlier full-sky windows) is rich in coverage.
+    // Fall back automatically instead of showing an empty stack.
+    if(!payload.observations.length && state.release==='qr3' && !$('startDate').value && !$('endDate').value){
+      setQueryStatus('No QR3 coverage for this field yet (the newest quick release covers the sky progressively) - automatically retrieving QR2…');
+      state.release='qr2';$('releaseSelect').value='qr2';
+      params.set('release','qr2');
+      response=await fetch('/api/observations?'+params,{headers:{Accept:'application/json'}});
+      payload=await response.json();
+      if(!response.ok)throw Error(payload.detail||`Archive query failed (${response.status})`);
+      if(queryId!==state.queryCounter)return;
+    }
     state.allResults=payload.observations;state.coverage=payload.coverage||null;filterObservations();updateCoverageSummary();
     if(state.pendingView){
       restoreViewSelection(state.pendingView);state.pendingView=null;
       await renderImages();
     }
     $('metaRelease').textContent=state.release.toUpperCase();
+    const fallbackNote=(payload.observations.length&&state.release==='qr2'&&params.get('release')==='qr2')
+      ?' (No QR3 coverage for this field yet - QR2 earlier full-sky windows retrieved automatically.)':'';
     const warning=payload.may_be_truncated?' Result cap reached; this may NOT include every epoch. Narrow the search in future releases.':'';
-    setQueryStatus(`${state.allResults.length} IRSA FITS exposure records returned.${warning}`);
-    if(!state.allResults.length){setQueryStatus('No compatible on-prem SPHEREx FITS images in this release. Try QR2, a different field, or check IRSA directly.');}
+    setQueryStatus(`${state.allResults.length} IRSA FITS exposure records returned from ${state.release.toUpperCase()}.${fallbackNote}${warning}`);
+    if(!state.allResults.length){setQueryStatus('No compatible on-prem SPHEREx FITS images in either quick release for this field. Try Deep fields, a different epoch window, or check IRSA directly.');}
     const visibleParams=new URLSearchParams(params);
     visibleParams.set('band',$('bandSelect').value);
     history.replaceState({},'',`?${(state.a||state.sequence.length)?viewParams():visibleParams}`);
