@@ -161,11 +161,11 @@ def catalog(ra: float, dec: float, fov: float = 9.0, survey: Literal['gaia'] = '
 
 @app.get('/api/atlas_image')
 def atlas_image(ra: float, dec: float, fov: float = 9.0,
-                ref: Literal['wise'] = 'wise'):
+                ref: Literal['wise'] = 'wise', tier: Literal['detail', 'context'] = 'detail'):
     """Compact WCS-aligned reference FITS (IRSA AllWISE atlas) for the atlas view."""
     validate_coords(ra, dec, fov)
     try:
-        payload = atlas_fits(round(ra, 6), round(dec, 6), round(fov, 4), ref)
+        payload = atlas_fits(round(ra, 6), round(dec, 6), round(fov, 4), ref, tier)
     except AtlasError as exc:
         raise HTTPException(503, str(exc)) from exc
     return Response(payload, media_type='application/fits',

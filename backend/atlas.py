@@ -95,10 +95,20 @@ def _download_cutout(url: str) -> bytes:
 
 
 @lru_cache(maxsize=16)
-def atlas_fits(ra: float, dec: float, fov_arcmin: float, survey: str = 'wise') -> bytes:
-    """Compact WCS-preserved display FITS of AllWISE imagery around a target."""
-    if fov_arcmin > 60.0:
-        raise AtlasError('Reference imagery supports fields up to 60 arcmin; narrow the field of view.')
+def atlas_fits(ra: float, dec: float, fov_arcmin: float, survey: str = 'wise',
+               tier: str = 'detail') -> bytes:
+    """Compact WCS-preserved display FITS of AllWISE imagery around a target.
+
+    tier='detail': ~2x the requested field (sharp zoom-in view).
+    tier='context': the widest single-tile cutout (~1.25 deg) so zooming out
+    keeps showing real sky rather than an empty edge.
+    """
+    if tier == 'context':
+        size_deg = 1.25
+    else:
+        if fov_arcmin > 60.0:
+            raise AtlasError('Reference imagery supports fields up to 60 arcmin; narrow the field of view.')
+        size_deg = min(max(fov_arcmin / 60.0 * 2.0, 0.1), 1.25)
     rows = _ibe_search(round(ra, 6), round(dec, 6))
     if not rows:
         raise AtlasError('No AllWISE coadd tile covers this position in IRSA.')
@@ -107,13 +117,12 @@ def atlas_fits(ra: float, dec: float, fov_arcmin: float, survey: str = 'wise') -
     # Docs example: 03/0390/0390p605_ac51/0390p605_ac51-w1-int-3.fits
     tile_url = (f'{IBE_BASE}/data/wise/allwise/p3am_cdd/'
                 f"{coadd_id[:2]}/{coadd_id[:4]}/{coadd_id}/{coadd_id}-w{BAND}-int-3.fits")
-    size_deg = min(max(fov_arcmin / 60.0 * 2.0, 0.1), 1.25)
     cutout_url = tile_url + '?' + urlencode({'center': f'{ra:.6f},{dec:.6f}', 'size': f'{size_deg:.6f}'})
     tile_bytes = _download_cutout(cutout_url)
     if tile_bytes[:2] == b'\x1f\x8b':  # IBE serves gzip-compressed FITS cutouts
         import gzip
         tile_bytes = gzip.decompress(tile_bytes)
-    return _make_display_fits(tile_bytes, ra, dec, fov_arcmin)
+    return _make_display_fits(tile_bytes, ra, dec, fov_arcmin if tier == 'detail' else size_deg * 60)
 
 
 def _make_display_fits(tile_bytes: bytes, ra: float, dec: float, fov_arcmin: float) -> bytes:

@@ -499,7 +499,8 @@ function setAtlasStatus(kind, message){
 }
 function loadIrsaReferenceImage(){
   // IRSA-backed reference FITS: served by our own backend, so it works on any
-  // network that can reach this app (no CDS dependency).
+  // network that can reach this app (no CDS dependency).  Two layers: a wide
+  // ~1.25-deg context image underneath and the sharp field cutout on top.
   const fallback=$('atlasFallback'), text=$('atlasFallbackText'), retry=$('atlasRetry');
   const {ra,dec,fov}=coord();
   if(fallback){fallback.hidden=true;}
@@ -507,22 +508,28 @@ function loadIrsaReferenceImage(){
   if(!a){return;}
   a.removeLayers();
   setAtlasStatus('loading','Loading AllWISE W1 (3.4 µm) from IRSA…');
-  const url=`/api/atlas_image?ra=${ra}&dec=${dec}&fov=${Math.min(fov,60)}&ref=wise`;
+  const base=`/api/atlas_image?ra=${ra}&dec=${dec}&ref=wise`;
+  const detailFov=Math.min(fov,60);
   // Aladin Lite v3: displayFITS(url, layerName, successCallback, errorCallback)
-  a.displayFITS(url, 'irsa-reference', ()=>{
-    if(fallback){fallback.hidden=true;}
-    // The cutout covers ~2x the requested field; frame the view on the field
-    // itself so the image fills the viewport with context around it.
-    a.gotoRaDec(ra,dec);
-    a.setFov(Math.min(fov,60)/60);
-    setAtlasStatus('ok','✓ AllWISE W1 · 3.4 µm · mid-infrared · IRSA — stars glow here');
-  }, ()=>{
+  let pending=2;
+  const done=()=>{
+    pending-=1;
+    if(pending===0){
+      a.gotoRaDec(ra,dec);
+      a.setFov(detailFov/60);
+      setAtlasStatus('ok','✓ AllWISE W1 · 3.4 µm · mid-infrared · IRSA — detail on top, ~1.25° context beneath (zoom out to see it)');
+    }
+  };
+  a.displayFITS(`${base}&fov=${detailFov}&tier=detail`, 'irsa-detail', done, ()=>{
     if(fallback){fallback.hidden=false;}
     if(text)text.textContent='Reference imagery is temporarily unavailable from IRSA (the archive did not respond). Press Load to retry — the SPHEREx data tools are unaffected.';
     if(retry)retry.hidden=false;
     setAtlasStatus('error','✗ IRSA did not respond — press Load to retry');
   });
-  a.gotoRaDec(ra,dec);a.setFov(Math.min(fov,60)/60);
+  a.displayFITS(`${base}&tier=context`, 'irsa-context', done, ()=>{
+    pending-=1; // context is optional: detail alone still works
+  });
+  a.gotoRaDec(ra,dec);a.setFov(detailFov/60);
 }
 function switchAtlasSource(){
   const src=currentAtlasSource();
