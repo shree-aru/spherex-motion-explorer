@@ -39,6 +39,31 @@
 
 **Scientific caution:** local wavelengths come from the visualization-grade WCS-WAVE lookup, not survey-grade spectral WCS files. Matching local wavelengths does **not** give calibrated difference photometry. WCS registration is interpolated, not flux-preserving. The tool does **not** perform PSF matching or absolute calibration, and must **not** be used to claim a new astronomical discovery.
 
+## How to use — the complete walkthrough
+
+**Quick tour (2 minutes):** open the app → keep **Barnard's Star · motion** selected → press **Find observations** → press **Use widest baseline** → wait for the registered frames to appear → press **▶** to blink two epochs of real SPHEREx sky. Then explore:
+
+| You want to… | Do this |
+|---|---|
+| Compare two dates | Click **A** then **B** on any rows in *Observation stack* (or click timeline markers) — frames render automatically; the epoch rail shows your baseline |
+| See motion / change | Pick **Blink** (alternate), **Split** (side-by-side), **B − A** (signed residual, amber = B brighter), or **Mean** |
+| Watch a time series | Press **＋** on 2–8 rows, then choose **Sequence** — chronological playback with one shared brightness scale |
+| Get a spectrum | Scroll to *On-the-fly spectrophotometry* → **Extract spectrum** → hover points for details → **↓ CSV** to export |
+| Identify fast movers | Render any frame → **✦ Gaia overlay** — cyan rings = Gaia stars at the observation epoch; **amber ring + arrow + "10.4″/yr"** = a fast mover (that's Barnard's Star, found automatically) |
+| Inspect details | Hover the frame: the *Data inspector* shows UTC, detector, wavelength range, **local λ at the target**, flagged-pixel fraction; the checklist flags any λ mismatch between your two epochs |
+| Zoom into the sky | **＋ / − / ⤢** buttons (right edge), **scroll wheel**, and **drag to pan** — the Gaia overlay scales with the image |
+| Put your field in context | *Reference sky atlas* tab — AllWISE W1 mid-infrared imagery loads by default (always available); the sharp field cutout sits on top of a ~1.25° context layer, so zooming out shows real sky. CDS HiPS optical surveys are one click away when the network allows |
+| Share / reproduce | **Share view** copies a URL that re-creates the exact view; **↓ Evidence JSON** exports observation IDs, spectra, caveats, and the dataset DOI |
+| Keyboard | **Space** = blink play/pause · **Esc** = stop · **?** = help |
+
+**Reading the science honestly:** the λ numbers come from each exposure's own spectral WCS (visualization-grade); a green ✓ on *local wavelength match* means your two epochs sampled the same band at the target. Residual cues in B − A are percentile-thresholded review aids — **not** detections. The tool never fabricates an image, an epoch, or a spectrum.
+
+## Documents in this repository
+
+- **[Project pitch](docs/SPHEREx_Motion_Explorer_Pitch.pdf)** — the full story: challenge, solution, verified evidence, impact, roadmap
+- **[Technical documentation](docs/SPHEREx_Motion_Explorer_Tech_Stack.pdf)** — architecture, module reference, science core, API, security, deployment
+- [UI design guide](docs/UI_DESIGN_GUIDE.md) · [Competition readiness](docs/COMPETITION_READINESS.md) · [Development roadmap](docs/ROADMAP.md)
+
 ## Install and run on Windows
 
 1. Install [Python 3.11 or 3.12](https://www.python.org/downloads/windows/) with **Add Python to PATH** selected.
