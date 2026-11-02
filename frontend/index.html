@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b111a">
+  <meta name="description" content="SPHEREx Motion Explorer — independent, scientific time-domain sky viewer using publicly released NASA observations.">
+  <title>SPHEREx Motion Explorer · Observation Workbench</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand" aria-label="SPHEREx Motion Explorer">
+      <span class="brand-mark" aria-hidden="true"><i></i></span>
+      <span class="brand-copy"><strong>SPHEREx <span>Motion Explorer</span></strong><small>TIME-DOMAIN RESEARCH WORKBENCH</small></span>
+    </div>
+    <div class="top-divider"></div>
+    <div class="workspace-title">Sky investigation <span class="build-tag">PREVIEW 0.5</span></div>
+    <div class="top-actions">
+      <span class="archive-status"><span class="status-dot"></span><span>Archive-ready interface <small>· data on request</small></span></span>
+      <span class="source-pill">NASA / IPAC IRSA</span>
+      <button id="shareBtn" class="top-button" title="Copy a shareable URL with selected coordinates and observations">Share view</button>
+      <a class="top-button" target="_blank" rel="noopener noreferrer" href="https://irsa.ipac.caltech.edu/Missions/spherex.html">Official archive ↗</a>
+      <button id="helpBtn" class="top-button help-btn" title="Open keyboard shortcuts and quick start" aria-label="Open help">?</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <nav class="nav-rail" aria-label="Workbench sections">
+      <div class="rail-group">
+        <div class="rail-divider-title">TOOLS</div>
+        <button class="rail-button active" data-nav="explore" title="Explore sky coordinates" aria-label="Explore sky coordinates" aria-current="page"><span class="rail-glyph" aria-hidden="true">⌖</span><span>Explore</span></button>
+        <button class="rail-button" data-nav="observations" title="View archive exposures" aria-label="View archive exposures"><span class="rail-glyph" aria-hidden="true">▤</span><span>Frames</span></button>
+        <button class="rail-button" data-nav="compare" title="Compare time epochs" aria-label="Compare time epochs"><span class="rail-glyph" aria-hidden="true">◫</span><span>Compare</span></button>
+        <button class="rail-button" data-nav="atlas" title="Open reference sky atlas" aria-label="Open reference sky atlas"><span class="rail-glyph" aria-hidden="true">◎</span><span>Atlas</span></button>
+        <button class="rail-button" data-nav="inspector" title="Review observation metadata" aria-label="Review observation metadata"><span class="rail-glyph" aria-hidden="true">≡</span><span>Metadata</span></button>
+      </div>
+      <div class="rail-bottom"><span class="nav-rail-logo" aria-hidden="true">S</span><span class="rail-version">v0.5</span></div>
+    </nav>
+
+    <div class="workarea">
+      <section class="timeline-card" aria-labelledby="timelineHeading">
+        <div class="timeline-heading">
+          <div class="timeline-title-group"><span class="section-kicker">OBSERVATION ACTIVITY</span><h2 id="timelineHeading">Epoch timeline</h2><span id="timelineSummary" class="timeline-summary">Search the archive to populate actual observation dates</span></div>
+          <div class="timeline-legend"><span><i class="legend-dot available"></i> Archive epoch</span><span><i class="legend-dot frame-a"></i> Frame A</span><span><i class="legend-dot frame-b"></i> Frame B</span><span><i class="legend-dot sequence"></i> Sequence</span></div>
+        </div>
+        <div id="timelineTrack" class="timeline-track" role="group" aria-label="Actual observation dates from selected SPHEREx archive query"><div class="timeline-placeholder">NO OBSERVATIONS LOADED <span>•</span> Timeline will display archive timestamps, never invented epochs</div></div>
+        <div class="timeline-axis"><span id="timelineStart">—</span><span id="timelineMiddle">SELECT AN EXPOSURE TO SET FRAME A OR B</span><span id="timelineEnd">—</span></div>
+      </section>
+
+      <div class="workspace">
+        <aside class="left-panel" id="queryPanel" aria-labelledby="queryTitle">
+          <div class="panel-header"><span class="section-kicker">TARGET ACQUISITION</span><span class="panel-index">01 / QUERY</span></div>
+          <h1 id="queryTitle">Find a sky field</h1>
+          <p class="intro">Search public SPHEREx observations by sky position. Nothing is displayed as mission data until retrieved.</p>
+          <ol class="workflow-steps" aria-label="Three-step workflow"><li><b>01</b> Choose a field</li><li><b>02</b> Retrieve archive epochs</li><li><b>03</b> Compare and review</li></ol>
+          <label class="form-label" for="targetPreset">Reference target</label>
+          <select id="targetPreset" class="form-input"><option value="barnard">Barnard's Star · motion</option><option value="epsilon">ε Indi B · brown dwarfs</option><option value="wise0855">WISE 0855−0714 · motion</option><option value="rw-aur">RW Aurigae · variable</option><option value="r-dra">R Draconis · variable</option><option value="custom">Custom coordinates</option></select>
+          <div class="input-grid"><div><label class="form-label" for="raInput">RA <span>ICRS / degrees</span></label><input id="raInput" class="form-input mono" type="number" step="any" min="0" max="359.999999"></div><div><label class="form-label" for="decInput">Dec <span>ICRS / degrees</span></label><input id="decInput" class="form-input mono" type="number" step="any" min="-90" max="90"></div></div>
+          <p class="subnote" id="epochNote">Position is approximately propagated to 2026; parallax is not included.</p>
+          <div class="group-label"><label class="form-label" for="fovInput">Field of view</label><span id="fovValue" class="mono">9 arcmin</span></div>
+          <input id="fovInput" type="range" min="1" max="18" step="1" value="9" aria-label="Field of view in arcminutes">
+          <div class="range-ends"><span>1′ · detail</span><span>18′ · wide field</span></div>
+          <div class="section-divider"><span>ARCHIVE FILTERS</span></div>
+          <div class="input-grid compact"><div><label class="form-label" for="releaseSelect">Release</label><select class="form-input" id="releaseSelect"><option value="qr3">Quick Release 3</option><option value="qr2">Quick Release 2</option></select></div><div><label class="form-label" for="bandSelect">Detector</label><select class="form-input" id="bandSelect"><option value="all">All detectors</option><option value="D1">D1 · 0.75–1.09 µm</option><option value="D2">D2 · 1.10–1.62 µm</option><option value="D3">D3 · 1.63–2.41 µm</option><option value="D4">D4 · 2.42–3.82 µm</option><option value="D5">D5 · 3.83–4.41 µm</option><option value="D6">D6 · 4.42–5.00 µm</option><option value="Unknown">Unclassified</option></select></div></div>
+          <label class="form-label label-top" for="surveySelect">Observation programme</label><select id="surveySelect" class="form-input"><option value="wide">All-sky survey</option><option value="deep">Deep fields</option></select>
+          <div class="input-grid compact date-grid"><div><label class="form-label" for="startDate">Start UTC</label><input id="startDate" type="date" class="form-input" min="2025-05-01"></div><div><label class="form-label" for="endDate">End UTC</label><input id="endDate" type="date" class="form-input" min="2025-05-01"></div></div>
+          <p class="date-help">Date filters are optional. Deep fields may provide more repeat visits.</p>
+          <button class="primary-button" id="searchButton"><span class="search-icon" aria-hidden="true"></span>Find observations</button>
+          <p id="queryStatus" class="query-status" role="status" aria-live="polite">Ready. No archive request made.</p>
+          <div id="coverageSummary" class="coverage-summary" hidden><strong>ARCHIVE COVERAGE</strong><span id="coverageText">—</span><button id="baselineButton" class="muted-button" type="button">Use widest baseline</button></div>
+          <div class="query-guidance"><div class="guidance-heading">OBSERVING TIP</div>For visible motion, select exposures with a long time baseline and similar wavelength coverage. A residual alone is not a discovery.</div>
+        </aside>
+
+        <main class="center-panel" id="skyPanel" aria-label="Scientific image viewer">
+          <div class="viewport-top">
+            <div class="heading"><span class="section-kicker">REGISTERED INFRARED FIELD</span><div class="target-heading-row"><h2 id="fieldName">Barnard's Star</h2><span class="view-tag">ICRS</span></div><p id="fieldCoords" class="mono">ICRS · —</p></div>
+            <div class="viewer-tabs" role="tablist" aria-label="Sky image source"><button class="viewer-tab active" data-tab="frames" role="tab" aria-selected="true">SPHEREx observations</button><button class="viewer-tab" data-tab="atlas" role="tab" aria-selected="false">Reference sky atlas</button></div>
+          </div>
+          <div class="viewer-meta-strip"><span>SCIENCE VIEWPORT</span><span>WCS · TAN</span><span>IMAGE REGISTERED ON COMMON SKY GRID</span><span id="viewportResolution">FOV 9′ × 9′</span></div>
+          <div id="frameStage" class="stage" aria-label="Registered SPHEREx sky observations">
+            <div class="stage-hud top-left"><span class="hud-mark">+ SKY FRAME</span><span id="viewModeText">NO IMAGE SELECTED</span></div>
+            <div class="stage-hud top-right"><span id="epochHud">EPOCH —</span></div>
+            <div id="imagePane" class="image-pane" hidden><img id="frameA" class="science-image" alt="Registered infrared image from SPHEREx observation A"><img id="frameB" class="science-image" alt="Registered infrared image from SPHEREx observation B" hidden><canvas id="overlayCanvas" class="overlay-canvas" hidden></canvas></div>
+            <div id="emptyStage" class="empty-stage"><svg class="empty-symbol" aria-hidden="true" viewBox="0 0 176 176" fill="none"><circle cx="88" cy="88" r="47" stroke="currentColor" stroke-opacity=".50"/><circle cx="88" cy="88" r="20" stroke="currentColor" stroke-opacity=".68"/><circle cx="88" cy="88" r="6" fill="currentColor" fill-opacity=".7"/><path d="M88 7v53m0 56v53M7 88h53m56 0h53" stroke="currentColor"/><path d="M40 40l96 96M136 40l-96 96" stroke="currentColor" stroke-opacity=".14"/><circle cx="88" cy="88" r="72" stroke="currentColor" stroke-dasharray="2 8" stroke-opacity=".24"/></svg><span class="empty-caption">OBSERVATION VIEWPORT / IDLE</span><h3>Your next discovery starts with a field</h3><p>Choose celestial coordinates and retrieve actual SPHEREx observations. This area remains empty until real mission imagery is available.</p><button type="button" class="empty-action" id="emptyAction">Go to target search <span aria-hidden="true">↗</span></button></div>
+            <div id="renderLoading" class="render-loading" hidden><span class="spinner"></span><strong>Processing SPHEREx FITS cutouts</strong><small>Downloading, masking, and registering observations to a common celestial coordinate system.</small></div>
+            <div id="imageError" class="error-banner" role="alert" hidden></div>
+            <div class="stage-hud bottom-left"><span id="imageLegend">No calibrated image displayed</span></div>
+            <div class="stage-hud bottom-right"><span id="scaleHud">N ↑ &nbsp; E ←</span></div>
+            <div class="stage-overlay-controls"><button id="gaiaToggle" class="hud-button" disabled title="Overlay epoch-propagated Gaia DR3 reference stars (IRSA TAP)">✦ Gaia overlay</button></div>
+          </div>
+          <div id="atlasStage" class="atlas-stage" hidden><div class="atlas-header"><strong>External reference survey · NOT SPHEREx</strong><span>Compare the same field against background optical survey imagery.</span><label class="atlas-survey-row" for="atlasSurvey">Survey <select id="atlasSurvey" class="form-input"><option value="https://alasky.cds.unistra.fr/DSS/DSSColor">DSS2 colour · CDS</option><option value="https://alaskybis.cds.unistra.fr/DSS/DSSColor">DSS2 colour · CDS mirror</option><option value="P/DSS2/red">DSS2 red</option><option value="P/2MASS/color">2MASS near-infrared</option><option value="P/allWISE/color">WISE mid-infrared</option></select></label></div><div id="aladin-lite-div" class="aladin-viewer"></div><div id="atlasFallback" class="atlas-fallback"><span id="atlasFallbackText">Preparing the atlas engine…</span><button id="atlasRetry" class="muted-button" type="button" hidden>Retry atlas</button></div></div>
+          <div class="transport" aria-label="Time comparison controls">
+            <div class="transport-left"><button class="transport-button play" id="playBtn" disabled aria-label="Play or pause blink animation"><span id="playSymbol">▶</span></button><div class="transport-description"><strong id="transportTitle">Select two observation dates</strong><small id="transportSubtitle">Set frames A and B from the exposure list.</small></div></div>
+            <div class="mode-switch" role="group" aria-label="Comparison mode"><button data-mode="blink" class="mode-button active">Blink</button><button data-mode="split" class="mode-button">Split</button><button data-mode="difference" class="mode-button">B − A</button><button data-mode="mean" class="mode-button">Mean</button><button data-mode="sequence" class="mode-button">Sequence</button></div>
+            <div class="speed-wrap"><label for="speedSelect">PLAYBACK</label><select id="speedSelect"><option value="1200">0.8 fps</option><option selected value="650">1.5 fps</option><option value="300">3.3 fps</option></select></div>
+          </div>
+          <div id="sequenceRail" class="sequence-rail" hidden><div class="sequence-rail-label">CHRONOLOGICAL SEQUENCE <span id="sequenceRailCount">0 FRAMES</span></div><div id="sequenceChips" class="sequence-chips"><span class="empty-tape">Add exposures using + in the archive list.</span></div></div>
+          <div class="epoch-rail"><div class="epoch-marker"><span class="tag-a">A</span><div><small>FRAME A</small><strong id="dateA">No observation</strong></div></div><div class="epoch-link"><span>COMPARISON BASELINE <strong id="baselineValue">—</strong></span><div class="rule"></div></div><div class="epoch-marker end"><div><small>FRAME B</small><strong id="dateB">No observation</strong></div><span class="tag-b">B</span></div></div>
+          <div class="science-cards">
+            <section class="science-card" aria-labelledby="wavelengthHeading"><div class="science-card-heading"><span class="section-kicker">WAVELENGTH COVERAGE</span><h3 id="wavelengthHeading">Selected exposure ranges</h3></div><div id="wavelengthPlot" class="wavelength-plot"><div class="wavelength-empty">Select observations to compare their reported wavelength coverage.</div></div><p>Metadata ranges only. Local wavelengths and PSFs can differ between exposures.</p></section>
+            <section class="science-card interpretation-card" aria-labelledby="interpretationHeading"><div class="science-card-heading"><span class="section-kicker">SCIENTIFIC CAUTION</span><h3 id="interpretationHeading">Interpretation checklist</h3></div><div class="science-check"><span class="check-indicator" id="dateCheck">–</span><span id="dateCheckText">Choose exposures at different epochs</span></div><div class="science-check"><span class="check-indicator" id="bandCheck">–</span><span id="bandCheckText">Match detector ranges before differencing</span></div><div class="science-check"><span class="check-indicator" id="lambdaCheck">–</span><span id="lambdaCheckText">Local wavelength match at target (from rendered metadata)</span></div><div class="science-check"><span class="check-indicator">!</span><span>PSF matching and calibrated difference noise still not applied</span></div></section>
+            <section class="science-card review-card" aria-labelledby="reviewHeading"><div class="science-card-heading"><span class="section-kicker">HUMAN REVIEW AID</span><h3 id="reviewHeading">Exploratory residual cues</h3></div><div id="reviewCueList" class="review-cue-list"><div class="wavelength-empty">Select two frames and render B − A to inspect strong residual regions.</div></div><p>Percentile-thresholded display-pixel regions only. Not detections, significance estimates, or measured motion.</p></section>
+          </div>
+          <section class="spectrum-card" id="spectrumCard" aria-labelledby="spectrumHeading">
+            <div class="spectrum-header">
+              <div><span class="section-kicker">ON-THE-FLY SPECTROPHOTOMETRY</span><h3 id="spectrumHeading">Exploratory spectrum at target</h3><p class="spectrum-sub">Aperture extraction from many real archive files; each point's wavelength comes from the per-pixel spectral WCS of its own exposure.</p></div>
+              <div class="spectrum-actions">
+                <button id="spectrumButton" class="primary-button small">Extract spectrum</button>
+                <button id="spectrumCsv" class="muted-button" disabled>↓ CSV</button>
+              </div>
+            </div>
+            <div id="spectrumPlot" class="spectrum-plot"><div class="wavelength-empty">No spectrum extracted yet. Points are never simulated.</div></div>
+            <div class="spectrum-legend" id="spectrumLegend" hidden></div>
+            <p class="spectrum-caveat">Exploratory: statistical errors only (VARIANCE extension), visualization-grade wavelengths, no aperture correction. Not calibrated spectrophotometry — use IRSA official products for science.</p>
+          </section>
+          <div class="footer-note"><div class="footer-icon">i</div><div><strong>Research preview, not automated discovery</strong><p>Aligned visual products are exploratory. Validate wavelengths, uncertainties and artifacts before reporting object motion or variability.</p></div></div>
+        </main>
+
+        <aside class="right-panel" id="observationsPanel" aria-label="Archive observations and science inspector">
+          <section class="exposure-section"><div class="panel-header"><span class="section-kicker">ARCHIVE EXPOSURES</span><span class="panel-index">02 / FRAMES</span></div><div class="result-title"><h2>Observation stack</h2><span id="resultCount" class="result-count">—</span></div><p class="hint">Choose <b>A</b> and <b>B</b> to compare, or <b>+</b> to add 2–8 frames to a sequence. Click timeline markers to choose A/B.</p><div id="observationList" class="observation-list" aria-label="SPHEREx observations"><div class="list-placeholder">Waiting for an archive query. Observation entries are never simulated.</div></div><div class="list-actions"><span class="form-label">Sequence frames <span id="sequenceCount">0 / 8</span></span><button id="clearSequence" class="muted-button" disabled>Clear</button></div></section>
+          <section class="inspector-section" id="inspectorPanel"><div class="panel-header"><span class="section-kicker">DATA INSPECTOR</span><span class="panel-index">03 / DETAILS</span></div><h2>Observation metadata</h2><div class="inspector-status"><span class="inspector-lamp"></span><span id="scienceState">No frame selected</span></div>
+            <div class="meta-section"><div class="meta-heading">SKY FIELD</div><dl><div><dt>Coordinate system</dt><dd>ICRS</dd></div><div><dt>Centre RA</dt><dd id="metaRa" class="mono">—</dd></div><div><dt>Centre Dec</dt><dd id="metaDec" class="mono">—</dd></div><div><dt>Sky field</dt><dd id="metaFov" class="mono">9′ × 9′</dd></div></dl></div>
+            <div class="meta-section"><div class="meta-heading">FRAME A <span class="meta-pill a">A</span></div><dl><div><dt>Observed UTC</dt><dd id="metaDateA" class="mono">—</dd></div><div><dt>Detector</dt><dd id="metaBandA">—</dd></div><div><dt>Wavelength range</dt><dd id="metaWaveA" class="mono">—</dd></div><div><dt>Local λ at target</dt><dd id="metaLocalA" class="mono">—</dd></div><div><dt>Flagged pixels</dt><dd id="metaFlagA" class="mono">—</dd></div></dl></div>
+            <div class="meta-section"><div class="meta-heading">FRAME B <span class="meta-pill b">B</span></div><dl><div><dt>Observed UTC</dt><dd id="metaDateB" class="mono">—</dd></div><div><dt>Detector</dt><dd id="metaBandB">—</dd></div><div><dt>Wavelength range</dt><dd id="metaWaveB" class="mono">—</dd></div><div><dt>Local λ at target</dt><dd id="metaLocalB" class="mono">—</dd></div><div><dt>Flagged pixels</dt><dd id="metaFlagB" class="mono">—</dd></div></dl></div>
+            <div class="meta-section provenance"><div class="meta-heading">PROVENANCE</div><dl><div><dt>Source</dt><dd>NASA/IPAC IRSA</dd></div><div><dt>Data release</dt><dd id="metaRelease">QR3</dd></div><div><dt>Registration</dt><dd>WCS · TAN</dd></div><div><dt>Image sampling</dt><dd>6.2″ / pixel</dd></div><div><dt>Photometric status</dt><dd class="caution">Not certified</dd></div></dl></div>
+            <div class="export-grid"><button id="downloadPng" class="export-button" disabled>↓ Image PNG</button><button id="exportEvidence" class="export-button secondary-export" disabled>↓ Evidence JSON</button></div>
+            <div class="credits">Independent astronomy software. SPHEREx data: NASA / JPL-Caltech / IPAC. External atlas: CDS Aladin Lite and credited surveys. Not an official NASA application.</div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <footer class="statusbar"><div><span class="status-pin"></span> Independent science application <span class="status-separator">|</span> Scientific images: NASA / IPAC archive only</div><div>UTC timestamps <span class="status-separator">|</span> Windows / Web <span class="status-separator">|</span> <span id="statusBuild">v0.5.0</span></div></footer>
+</div>
+<dialog id="helpDialog" class="help-dialog" aria-labelledby="helpHeading"><div class="help-top"><div><span class="section-kicker">GETTING STARTED</span><h2 id="helpHeading">Workbench quick start</h2></div><button id="closeHelp" class="top-button">Close ×</button></div><ol><li>Choose a reference target or enter RA and Dec in decimal degrees.</li><li>Select survey and release, then choose <strong>Find observations</strong>.</li><li>Use A/B buttons in Observation stack to compare two records.</li><li>Choose Blink, Split or exploratory B − A. Or press + next to several records and use Sequence.</li><li>Press <strong>Extract spectrum</strong> to build an exploratory spectrophotometry plot from many exposures.</li><li>Toggle <strong>Gaia overlay</strong> to draw epoch-propagated reference stars on the image; arrows show proper motion (exaggerated).</li><li>Use Evidence JSON to preserve source details and processing caveats.</li></ol><p><strong>Keyboard:</strong> Space starts/stops an available blink (outside form fields); Escape pauses playback; ? opens this help.</p><p class="help-warning">The interface contains no placeholder science measurements, fake epochs or fictional sky exposures.</p></dialog>
+<script type="module">
+  // Vendored Aladin Lite v3 (ES module build, wasm inlined). Published as the
+  // same global the CDN UMD build used, so app.js is unchanged.
+  import A from '/vendor/aladin.js';
+  window.A = A;
+</script>
+<script src="/app.js" defer></script>
+</body>
+</html>
