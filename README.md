@@ -156,3 +156,9 @@ See [development roadmap](docs/ROADMAP.md), [release validation notes](docs/RELE
 ## Credits and licensing
 
 See `LICENSE` and `THIRD_PARTY.md`. NASA/SPHEREx/IRSA data and mission names remain credited to their respective owners; no NASA insignia or project logo is replicated. Aladin Lite is embedded as an astronomy component with its native attribution intact. This independently developed UI is a workbench design, not an attempt to pass itself off as an official NASA/ESA/CDS site.
+
+Inspirational lineage: [WiseView](http://byw.tools/wiseview) — the WISE/NEOWISE-era motion viewer with which the public made hundreds of discoveries — inspired this workbench's blink-comparator approach for SPHEREx.
+
+## Super Intelligence (SI) use disclosure
+
+SI tools (ZCode, a GLM large-language-model agent) assisted this project's development in three areas: application code and debugging, documentation and submission text, and the layout of the demonstration deck (`docs/QoreX_SpaceApps_Demo.pptx`). All scientific data displayed by the application is fetched live from NASA/IPAC IRSA services; the tool never presents SI-generated or simulated imagery as observations, and no SI-generated content uses or modifies NASA branding or design elements. The source code, offline test suite, and live verification artifacts in this repository are human-reviewed and public.

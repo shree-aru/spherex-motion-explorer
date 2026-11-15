@@ -1,0 +1,375 @@
+=== PAGE 25 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+to 25 pixels, and may also result in square bloom regions. In this case, the predicted persistence current of
+these early transient pixels flagged for bloom will be artificially inflated, leading to these pixels being flagged
+for persistence for longer than necessary in subsequent images.
+Table 9
+CORE SNOW PIXELS MANTLE SNOW PIXELS
+Type Label MINIMUM FLUENCE Label MINIMUM FLUENCE
+1 LG EARLY TRANS <F over EARLY TRANSIENT any
+2 LG LATE TRANS any LATE TRANSIENT any
+3 ONLY OVERFLOW <F over EARLY TRANSIENT any
+4 EARLY OVERFLOW N/A LATE TRANSIENT any
+Step 2. Non-Overflow Bloom FlaggingIt has also been observed that there are cases where pixels
+illuminated by a source exhibit the TRANSIENT flag without also triggering the OVERFLOW flag. This
+may be due to sub-pixel pointing jitter, variable star signal or pre-saturation charge repulsion from the
+central pixel (also known as the brighter-fatter effect). In these cases, the flux recorded in the transient
+pixel is commensurate with a source. Thus, after the identification of Source Blooming and Snowballs, the
+algorithm searches the remaining pixels for groups of blooming transients without an OVERFLOW center,
+i.e., contiguous pixels containing both EARLY TRANSIENT and LATE TRANSIENT flags according to
+the criteria in Table 10, prioritizing the greatest fluence. As high transient images will encourage false posi-
+tives, images identified as HIGH TRANS are ignored, as are pixels flagged NONFUNCT and pixels already
+flagged BLOOM or SNOWBALL. The identification of Non-Overflow Source Blooming proceeds along the
+same lines as for Source Blooming and Snowballs.
+Step 3. T ransient Halo FlaggingThe HALO flag only applies to the 2040×2040 active pixel region
+and is set for pixels surrounding SNOWBALL collections as well as transients not identified as with either
+SNOWBALL or BLOOM. In particular, three distinct cases are considered for flagging:
+•Snowball Halo Flagging:For each group of n SN OW pixels identified as a Snowball or high-energy
+Cosmic Ray, the centroid of these pixels containing the OVERFLOW flag is determined. From the
+pixel centroid, the region where the halo excess current exceeds 0.1 e/s extends out in a circle with a
+radius approximately equal to:
+rHALO =
+√
+2×n SN OW (1)
+All pixels within this radius are flagged with HALO.
+•Saturating Satellite Halo Flagging:If the pixel distance between the centroid and the furthest
+pixel in the collection exceeds that of r HALO determined by Snowball halo flagging, this is most likely
+a saturating satellite streak and not a Snowball. In this case, we apply a halo flag that mimics
+the Snowball halo, but with an extended shape. To do this we determine the skeleton of the track
+following the overflow pixels, obtain a distance map from the skeleton to the nearest edges of the
+Table 10: Non-Overflow Bloom Pixel Candidates
+Type Label MINIMUM FLUENCE
+1 EARLY TRANSIENT 0.5 F over
+2 EARLY TRANSIENT 0.1 F over
+3 LATE TRANSIENT 0.1 F over
+Caltech/IPAC SPHEREx Project Document Page 25 of 82
+=== PAGE 32 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+. . . continued
+Symbolic
+name
+Bit # Description Note
+DICHROIC 7 Pixels in the “dark corners” of Bands 3 and 4, where
+the “smile” effect results in pixels with a bandpass
+incompatible with which side of the dichroic they
+are on. This flag indicates pixels with low expected
+throughput that are not usefully calibrateable or of
+value for photometry.
+MISSING_DATA 9 Pixels for which the onboard data was lost before
+ingest by the SSDC, e.g., as corrupted packages on
+the downlink that were not retransmitted success-
+fully, resulting that there is no data available for
+this pixel in this image.
+Set by the Level 1
+pipeline based on
+per-image data content
+and quality
+assessment.
+HOT 10 Hot pixel – noisy or otherwise affected by spuri-
+ous signal. Determined per-exposure; permanently
+hot pixels are flagged asNONFUNC. Not usable for
+science.
+COLD 11 Pixel that appear unresponsive to light or other-
+wise has an anomalously low signal in a particular
+exposure; permanently dead pixels are flagged as
+NONFUNC. Not usable for science.
+FULLSAMPLE 12 Pixel for which the full sample history is available,
+because of the rotating 8×32 pixel region for full
+readout. Not usable for science, purely informa-
+tional.
+PHANMISS 14 Applied for pixels that can not be corrected due to
+missing phantom pixels.
+NONLINEAR 15 Pixel for which a reliable nonlinearity correction
+could not be determined. Due to poor photometric
+accuracy, this pixel should be excluded from most
+scientific analyses.
+Set by the Level 2
+pipeline based on
+per-image data content
+and quality assessment.
+PERSIST 17 Pixel found to have been affected by persistent
+charge above the Level 2 threshold for this.
+OUTLIER 19 Pixel flagged by “Detect Outlier Pixels” module
+(Sect. 3.2.10).
+CROSSTALK 20 Pixel found to have been affected by “ordinary”
+crosstalk (Sect. 3.2.9).
+SOURCE 21 Pixel mapped to a known source.
+GHOST 22 Pixel found to have been affected by an optical
+ghost from a bright source inside the exposure
+frame (Sect. 3.2.9).
+GHOST_FPA 23 Pixel found to have been affected by an optical
+ghost from a bright source seen on another detec-
+tor in the FPA. This flag is currently unused (sub-
+sumed into GHOST EXT) and will be removed in
+Year 2 processing.
+GHOST_EXT 24 Pixel found to have been affected by an optical
+ghost from a bright source outside the field of view.
+Currently in development.
+STREAK 25 Pixel found to have been affected by a streak de-
+tected in the image, presumably from an object in
+Earth orbit (Sect.3.2.10).
+continued . . .
+Caltech/IPAC SPHEREx Project Document Page 32 of 82
+=== PAGE 48 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+3.4.9 Data Quality and Flagging
+Bad pixels are identified by quality flags in the L2 input data, see Sect. 3.4.3 for the list of flags considered
+as bad by the mosaic algorithms. Pixels with bad flags are:
+•Set to NaN before reprojection
+•Excluded from accumulation (do not contribute to the weighted average)
+•Not included in the NHITS counter
+This ensures that bad pixels do not contaminate the final mosaic values.
+Selected flags (OVERFLOW, SOURCE, OUTLIER) are propagated to the output using bitwise OR:
+output_flags[j, i] = input1_flags | input2_flags | ... | inputN_flags
+This preserves information about which output pixels may be affected by saturated pixels, point sources,
+or outliers from any contributing input image.
+The FLAGS extension header includes MP <FLAG NAME>keywords defining the bit position of each
+propagated flag, following the IPAC Firefly visualization convention (needs reference)
+3.4.10 Known Issues
+There are several visual artifacts that occur in the output images, mainly due to the spectral sampling of
+the L VF (Sect. 2.2).
+Striping from Airglow Emission Lines: As described in Sect. 2.3, there are several atmospheric
+emission feasures that can be seen in SPHEREx data. These airglow emission features can create prominent
+stripe artifacts in SPHEREx mosaics. The most significant is the helium line at 1.083µm, which appears
+as a bright horizontal band across all band 1 images. Because the Linear Variable Filter maps wavelength
+to detector position, pixels sensitive to the airglow wavelength form a stripe pattern that follows the L VF
+contour geometry.
+When multiple exposures are combined into a mosaic, the airglow signal varies both temporally and
+spatially between observations. This variation creates scan-correlated banding patterns in the final mosaic,
+where the stripe orientation and intensity depend on the survey scan pattern and the time-varying airglow
+amplitude. Without mitigation, these stripes can severely contaminate the mosaic, potentially overwhelming
+faint astrophysical signals at these wavelengths.
+Striping from Extended Source Spectral F eatures: Extended sources with strong spectral features
+(emission lines, absorption bands) produce similar stripe artifacts. When an extended object has significant
+flux at a specific wavelength—such as Brackettαemission at 4.052µm in nebulae — the L VF causes this
+signal to appear as a horizontal stripe across the detector at the corresponding y-position.
+Because SPHEREx observes the same sky region at multiple spacecraft orientations, the stripe orientation
+rotates between observations. When these images are coadded, the stripes from different roll angles combine
+to create complex interference patterns. For sources with sharp spectral features, this can produce sawtooth
+or moir´ e-like artifacts that do not average down with increased coverage.
+The underlying cause is the entanglement of spatial and spectral information inherent to the L VF design:
+different parts of the field of view are observed at different wavelengths simultaneously, making it impossible
+to fully separate spatial structure from spectral features within a single exposure.
+Residual Artifacts from Incomplete L2 Masking: The L2 bad pixel masks may not capture all
+detector artifacts. The following known limitations apply:
+•Snowballs, blooming, and halo artifacts: Masking for these features was introduced starting with
+planning period 2025W51 1A (December 2025) and pipeline version 6.5. Quick Release 2 images from
+prior planning periods have these artifacts unmasked. All images will include this masking after the
+Year 1 data release.
+•Satellite streaks and crosstalk: Masking for satellite streaks is incomplete and crosstalk was not im-
+plemented in Quick Release 2 processing. All images will include this masking after the Year 1 data
+release.
+These unmasked artifacts propagate through the mosaic pipeline and appear in the final products.
+Caltech/IPAC SPHEREx Project Document Page 48 of 82
+=== PAGE 71 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+A Spectral Image Header Example
+Table A.35: Spectral Image FITS Header Keywords (Example)
+Header V alue Units Description
+XTENSION ‘IMAGE ’ – Image extension
+BITPIX −32 – array data type
+NAXIS 2 – number of array dimensions
+NAXIS1 2040 –
+NAXIS2 2040 –
+PCOUNT 0 – number of parameters
+GCOUNT 1 – number of groups
+EXTNAME ‘IMAGE ’ – extension name
+EXTTYPE ‘IMAGE ’ – Extension supports mask overlay
+BUNIT ’MJy – sr’ / Unit of pixel value
+DETECTOR 4 – 1-3: SWIR, 4-6: MWIR
+OBSID ‘2025W17 4B 0458 1’ – Observation ID
+EXPIDN 202517402045814 – Integer Exposure ID
+DATE ‘2026-07-15T18:08:42.591’ – HDU creation time (UTC)
+TSAMP 1.5349 s Interval between pixel readouts (frame)
+KOVR_A 15000 adu Overflow detection limit, active pixels
+KOVR_R 15000 adu Overflow detection limit, ref pixels
+KOVR_P 15000 adu Overflow detection limit, phantom pixels
+OVRDLY 5 – threshold for overflow error flag
+SURLIM 77 – Number of frames detector accumulated
+charge
+SURDLY 3 – Frame count when SUR sums accumulation
+begins
+TRANDLY 7 – Frame count when transient detection be-
+gins
+TCUT 38 – threshold for transient error flag
+KEN_A 20000 adu2 Transient white noise threshold, active pix-
+els
+KEN_R 10000 adu2 Transient white noise threshold, ref pixels
+KEN_P 500 adu2 Transient white noise threshold, phantom
+pixels
+KSN_A 100 adu Transient shot noise threshold, active pixels
+KSN_R 0 adu Transient shot noise threshold, ref pixels
+KSN_P 0 adu Transient shot noise threshold, phantom
+pixels
+NSKIP 32 – Number of rows skipped after a full row is
+read
+NVISITROW 4 – Number of visits to each reference row
+NVISITCOL 1 – Number of visits to each reference col
+MPHAN 4 – Number of phantom columns reads
+NCHANNEL 32 – Number of readout channels
+WCHANNEL 64 – Number of columns in each readout channel
+JREF 8 – Number of physical reference rows on H2RG
+KREF 8 – Number of physical reference cols on H2RG
+JACTIVE 2040 – Number of light-sensitive pixel rows
+KACTIVE 2040 – Number of light-sensitive pixel cols
+SPS_TARGET ‘SPS 048902 S12’ – Extended target ID from Survey Planning
+continued . . .
+Caltech/IPAC SPHEREx Project Document Page 71 of 82
+=== PAGE 77 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+. . . continued
+Header V alue Units Description
+HISTORY [CALIB] readnoise pars 019f521c-b665-77e2-a0c0-de0b531467f9
+HISTORY Apply Bad Pixel Mask, SSDC-MS-013 v1.1
+HISTORY Apply Flat Field and Photometric Calibration, SSDC-MS-014 v1.5
+HISTORY Estimate Fine Astrometry, SSDC-MS-016 v2.5
+HISTORY Create Source Mask, SSDC-MS-019 v3.5
+HISTORY Detect Outlier Pixels, SSDC-MS-020 v1.4
+HISTORY Get Zodi Model, SSDC-MS-022 v2.3
+HISTORY Measure Per-Exposure PSF, SSDC-MS-023 v3.3
+HISTORY Create Spectral Image, SSDC-MS-024 v2.2
+HISTORY Perform Data Quality Assessment for Level 2, SSDC-MS-025 v1.4
+HISTORY [CALIB] abs gain matrix 019f4f95-6173-79cb-872b-f0f8abd8ed65
+HISTORY [CALIB] dark 019f4f96-1086-7845-9c97-d9a1076a80ed
+HISTORY [CALIB] epsf 019f4f97-864d-7bee-8722-a634bea7288f
+HISTORY [CALIB] sip 019f4f98-7f49-79e3-9a45-85e5641166aa
+HISTORY [CALIB] spectral wcs 019f4f99-3265-766b-b368-e28eb08fdbed
+HISTORY [CALIB] xtalk class2 019f521e-5e08-7cfe-942e-3cbb4851b510
+HISTORY [CALIB] zodi scaling 019f521d-4ada-70e7-a05f-b9791f90089b
+Primary HDU
+SIMPLE T – Conforms to FITS standard
+BITPIX 8 – Array data type
+NAXIS 0 – Number of array dimensions
+EXTEND T –
+Notes:The image extension is identified byEXTNAME=‘IMAGE’andEXTTYPE=‘IMAGE’, while the corresponding
+flags extension usesEXTNAME=‘FLAGS’andEXTTYPE=‘MASK’. The designationEXTTYPE=’MASK’indicates that
+the values within the extension represent bit masks, where each bit encodes a distinct flag condition.
+HISTORYandCOMMENTare excluded from this example.
+A.1 Transient Flags
+The ICE flight software includes Transient flagging designed to reduce the effects of cosmic rays on the
+reported photocurrents. As an exposure proceeds, and for each detector pixel, the Transient detection
+algorithm compares the current readout value of the pixel with a prediction based on the prior four reads. If
+the difference is statistically unlikely (as quantified by configurable parameters), then the Transient flag is set
+and the reported photocurrent is based only on reads before the Transient event. This algorithm is applied
+starting with the 7th readout frame following detector reset (as determined by the TRANDLY parameter).
+The detailed condition for detecting a transient is as follows:
+(2yi −2y i−1 −y i−2 +y i−4)2 >4×KEN+KSN×(y i−1 −y i−4 −3m) (27)
+Indexirefers to the current readout frame, and [y i−1 + (yi−2 −y i−4)/2] is an optimized predictor for the
+current read valuey i. The first term on the right-hand side of the equation is designed to look for statistical
+outliers for an approximately gaussian distribution of noise (applicable at low photocurrent), and the second
+term loosens the threshold to account for Poisson noise at higher photocurrent. The unit ofyis ADU; 1
+ADU corresponds roughly to 1 electron (see Electronic Gain Factors for a more accurate conversion).mis
+the amplifier drift rate measured during the prior exposure.
+KEN and KSN are configurable parameters which could be updated at some point during the mission,
+but have been fixed from the start of commissioning to date. Different values are used for the three types
+of H2RG and amplifier signals read, as specified in Table A.35. If the Transient is detected when the frame
+index is less than TCUT, then the SUR ERROR flag is set also (see Tables 16 and 14).
+For the current value of KEN A which is 20000, the Transient detection threshold is≥ 12 √4×KEN=
+141 ADU≈100 e-. The effect on photocurrent of undetected transients below this threshold depends on
+when during the exposure that the transient occurred.
+Caltech/IPAC SPHEREx Project Document Page 77 of 82
+=== PAGE 79 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+C Average EPSF Header Example
+Table C.1: Spectral Image FITS Header Keywords (Example)
+Header V alue Units Description
+XTENSION ‘BINTABLE’ – binary table extension
+BITPIX 8 – array data type
+NAXIS 2 – number of array dimensions
+NAXIS1 8752 – length of dimension 1
+NAXIS2 441 – length of dimension 2
+PCOUNT 0 – number of group parameters
+GCOUNT 1 – number of groups
+TFIELDS 11 – number of table fields
+EXTNAME ‘EPSF ’ – extension name
+DETECTOR ‘1 ’ – 1-3: SWIR, 4-6: MWIR
+OVSMPX 5 –
+OVSMPY 5 –
+MAXIT 10 –
+SMOOTH ‘quartic ’ –
+JUNKCLN 1 –
+KEEPNAT 3.5 –
+KEEPOS 17.5 –
+DETCOORD ‘sky ’ – MWIR pixels flipped on X to match SWIR
+view
+ORDERING ‘x-fast then y’ –
+BINSRC ‘filename’ –
+GEOMSRC ‘uniform active-pixel
+tiling’
+–
+NEFFSRC ‘stats table exact filename
+match’
+–
+WVMSRC ‘stats table exact filename
+match’
+–
+CWAVESRC ‘spectral wcs CW A VE’ –
+CBANDSRC ‘spectral wcs CBAND’ –
+TTYPE1 ‘BINX ’ –
+TFORM1 ‘J ’ –
+TTYPE2 ‘BINY ’ –
+TFORM2 ‘J ’ –
+TTYPE3 ‘XCENTER ’ –
+TFORM3 ‘E ’ –
+TUNIT3 ‘pixel ’ –
+TTYPE4 ‘YCENTER ’ –
+TFORM4 ‘E ’ –
+TUNIT4 ‘pixel ’ –
+TTYPE5 ‘XWIDTH ’ –
+TFORM5 ‘E ’ –
+TUNIT5 ‘pixel ’ –
+TTYPE6 ‘YWIDTH ’ –
+TFORM6 ‘E ’ –
+TUNIT6 ‘pixel ’ –
+TTYPE7 ‘NSTAR ’ –
+TFORM7 ‘J ’ –
+continued . . .
+Caltech/IPAC SPHEREx Project Document Page 79 of 82
+=== PAGE 80 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+. . . continued
+Header V alue Units Description
+TTYPE8 ‘NEFF MEAN’ –
+TFORM8 ‘E ’ –
+TTYPE9 ‘CW A VE ’ –
+TFORM9 ‘E ’ –
+TUNIT9 ‘um ’ –
+TTYPE10 ‘CBAND ’ –
+TFORM10 ‘E ’ –
+TUNIT10 ‘um ’ –
+TTYPE11 ‘EPSF ’ –
+TFORM11 ‘1089D ’ –
+TDIM11 ‘(33,33) ’ –
+HISTORY Headers standardized by SSDC on 2026-06-26T22:53:35.593 (UTC)
+HISTORY Calibration source file: epsf 1 20260507.fits
+Primary HDU
+SIMPLE T – Conforms to FITS standard
+BITPIX 8 – Array data type
+NAXIS 0 – Number of array dimensions
+EXTEND T –
+Notes:The image extension is identified byEXTNAME=‘IMAGE’andEXTTYPE=‘IMAGE’, while the corresponding
+flags extension usesEXTNAME=‘FLAGS’andEXTTYPE=‘MASK’. The designationEXTTYPE=’MASK’indicates that
+the values within the extension represent bit masks, where each bit encodes a distinct flag condition.
+HISTORYandCOMMENTare excluded from this example.
+Caltech/IPAC SPHEREx Project Document Page 80 of 82

@@ -22,5 +22,5 @@ timeout /t 4 /nobreak >nul
 echo [2/2] Opening the public tunnel. Your shareable URL appears below
 echo       (it stays valid while this window stays open; a new run gives a new URL).
 echo.
-"C:\Users\HP\Downloads\cloudflared.exe" tunnel --url http://127.0.0.1:8000 --no-autoupdate
+"cloudflared.exe" tunnel --url http://127.0.0.1:8000 --no-autoupdate
 pause

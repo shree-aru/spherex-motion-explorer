@@ -6,3 +6,5 @@ __pycache__/
 *.fits.gz
 .DS_Store
 .env
+cloudflared.exe
+hf_space_deploy/

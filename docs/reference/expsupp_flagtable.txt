@@ -1,0 +1,227 @@
+=== PAGE 24 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+science analyses.
+Description of AlgorithmThe algorithm consists of two steps. First, identifying Source Blooming,
+Snowballs and other transient events; and second, applying the extended halo (HALO) flag.
+Step 1. Identifying Source Blooming and SnowballThis step is based on the information associated
+with the flag combinations provided in Table 6. Only functional pixels (i.e., not flagged as NONFUNCT) in
+the 2040×2040 active pixel region are used.
+Table 6
+Label TRANSIENT OVERFLOW SUR ERROR
+NON FLAG 0 0 0
+EARLY TRANSIENT 1 0 1
+LATE TRANSIENT 1 0 0
+ONLY OVERFLOW 0 1 0
+EARLY OVERFLOW 0 1 1
+LG EARLY TRANS 1 1 1
+LG LATE TRANS 1 1 0
+Because of the similarity in flagging combinations, Blooming sources are identified first followed by Snow-
+ball sources. In both instances, saturated CORE pixels in a contiguous region are identified first and their
+associated mantles are found by an outward search from the core according to the criteria laid out in Table 7,
+Table 8 and Table 9. Blooming sources have one or more types of CORE BLOOM PIXELS and one or more
+types of MANTLE BLOOM PIXELS along with a circular shape and a decreasing signal that is larger than
+the background as you search outward from the mantle. Snowball sources have CORE SNOW PIXELS and
+MANTLE SNOW PIXELS of the same type (see Table 9) and typically approach background levels outside
+of the transient-flagged region.
+Table 7: CORE BLOOM PIXELS
+Label MINIMUM FLUENCE
+ONLY OVERFLOW F over
+EARLY OVERFLOW N/A
+LG EARLY TRANS F over
+Table 8: MANTLE BLOOM PIXELS
+Label MINIMUM FLUENCE
+ONLY OVERFLOW F over
+EARLY TRANSIENT 0.2×F over
+LATE TRANSIENT 0.1×F over
+Note that high transient fractions interfere with the algorithm. Therefore, for images with TRANSFRAC
+>0.1 additional restrictions apply, such as requiring circular shape, limiting fluence ranges and/or limit-
+ing the radius of the identified grouping. These limitations differ between Source Blooming and Snowball
+identification. The resulting flags in these high transient scenarios are used to determine the predicted per-
+sistence current in subsequent images. In rare cases where there are large-scale early transient regions and
+the recorded background signal is above the minimum signal threshold due to a transient foreground such
+as the fluctuation of aurora during an image, bloom detections may reach the limiting radius, currently set
+Caltech/IPAC SPHEREx Project Document Page 24 of 82
+
+=== PAGE 25 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+to 25 pixels, and may also result in square bloom regions. In this case, the predicted persistence current of
+these early transient pixels flagged for bloom will be artificially inflated, leading to these pixels being flagged
+for persistence for longer than necessary in subsequent images.
+Table 9
+CORE SNOW PIXELS MANTLE SNOW PIXELS
+Type Label MINIMUM FLUENCE Label MINIMUM FLUENCE
+1 LG EARLY TRANS <F over EARLY TRANSIENT any
+2 LG LATE TRANS any LATE TRANSIENT any
+3 ONLY OVERFLOW <F over EARLY TRANSIENT any
+4 EARLY OVERFLOW N/A LATE TRANSIENT any
+Step 2. Non-Overflow Bloom FlaggingIt has also been observed that there are cases where pixels
+illuminated by a source exhibit the TRANSIENT flag without also triggering the OVERFLOW flag. This
+may be due to sub-pixel pointing jitter, variable star signal or pre-saturation charge repulsion from the
+central pixel (also known as the brighter-fatter effect). In these cases, the flux recorded in the transient
+pixel is commensurate with a source. Thus, after the identification of Source Blooming and Snowballs, the
+algorithm searches the remaining pixels for groups of blooming transients without an OVERFLOW center,
+i.e., contiguous pixels containing both EARLY TRANSIENT and LATE TRANSIENT flags according to
+the criteria in Table 10, prioritizing the greatest fluence. As high transient images will encourage false posi-
+tives, images identified as HIGH TRANS are ignored, as are pixels flagged NONFUNCT and pixels already
+flagged BLOOM or SNOWBALL. The identification of Non-Overflow Source Blooming proceeds along the
+same lines as for Source Blooming and Snowballs.
+Step 3. T ransient Halo FlaggingThe HALO flag only applies to the 2040×2040 active pixel region
+and is set for pixels surrounding SNOWBALL collections as well as transients not identified as with either
+SNOWBALL or BLOOM. In particular, three distinct cases are considered for flagging:
+•Snowball Halo Flagging:For each group of n SN OW pixels identified as a Snowball or high-energy
+Cosmic Ray, the centroid of these pixels containing the OVERFLOW flag is determined. From the
+pixel centroid, the region where the halo excess current exceeds 0.1 e/s extends out in a circle with a
+radius approximately equal to:
+rHALO =
+√
+2×n SN OW (1)
+All pixels within this radius are flagged with HALO.
+•Saturating Satellite Halo Flagging:If the pixel distance between the centroid and the furthest
+pixel in the collection exceeds that of r HALO determined by Snowball halo flagging, this is most likely
+a saturating satellite streak and not a Snowball. In this case, we apply a halo flag that mimics
+the Snowball halo, but with an extended shape. To do this we determine the skeleton of the track
+following the overflow pixels, obtain a distance map from the skeleton to the nearest edges of the
+Table 10: Non-Overflow Bloom Pixel Candidates
+Type Label MINIMUM FLUENCE
+1 EARLY TRANSIENT 0.5 F over
+2 EARLY TRANSIENT 0.1 F over
+3 LATE TRANSIENT 0.1 F over
+Caltech/IPAC SPHEREx Project Document Page 25 of 82
+
+=== PAGE 32 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+. . . continued
+Symbolic
+name
+Bit # Description Note
+DICHROIC 7 Pixels in the “dark corners” of Bands 3 and 4, where
+the “smile” effect results in pixels with a bandpass
+incompatible with which side of the dichroic they
+are on. This flag indicates pixels with low expected
+throughput that are not usefully calibrateable or of
+value for photometry.
+MISSING_DATA 9 Pixels for which the onboard data was lost before
+ingest by the SSDC, e.g., as corrupted packages on
+the downlink that were not retransmitted success-
+fully, resulting that there is no data available for
+this pixel in this image.
+Set by the Level 1
+pipeline based on
+per-image data content
+and quality
+assessment.
+HOT 10 Hot pixel – noisy or otherwise affected by spuri-
+ous signal. Determined per-exposure; permanently
+hot pixels are flagged asNONFUNC. Not usable for
+science.
+COLD 11 Pixel that appear unresponsive to light or other-
+wise has an anomalously low signal in a particular
+exposure; permanently dead pixels are flagged as
+NONFUNC. Not usable for science.
+FULLSAMPLE 12 Pixel for which the full sample history is available,
+because of the rotating 8×32 pixel region for full
+readout. Not usable for science, purely informa-
+tional.
+PHANMISS 14 Applied for pixels that can not be corrected due to
+missing phantom pixels.
+NONLINEAR 15 Pixel for which a reliable nonlinearity correction
+could not be determined. Due to poor photometric
+accuracy, this pixel should be excluded from most
+scientific analyses.
+Set by the Level 2
+pipeline based on
+per-image data content
+and quality assessment.
+PERSIST 17 Pixel found to have been affected by persistent
+charge above the Level 2 threshold for this.
+OUTLIER 19 Pixel flagged by “Detect Outlier Pixels” module
+(Sect. 3.2.10).
+CROSSTALK 20 Pixel found to have been affected by “ordinary”
+crosstalk (Sect. 3.2.9).
+SOURCE 21 Pixel mapped to a known source.
+GHOST 22 Pixel found to have been affected by an optical
+ghost from a bright source inside the exposure
+frame (Sect. 3.2.9).
+GHOST_FPA 23 Pixel found to have been affected by an optical
+ghost from a bright source seen on another detec-
+tor in the FPA. This flag is currently unused (sub-
+sumed into GHOST EXT) and will be removed in
+Year 2 processing.
+GHOST_EXT 24 Pixel found to have been affected by an optical
+ghost from a bright source outside the field of view.
+Currently in development.
+STREAK 25 Pixel found to have been affected by a streak de-
+tected in the image, presumably from an object in
+Earth orbit (Sect.3.2.10).
+continued . . .
+Caltech/IPAC SPHEREx Project Document Page 32 of 82
+
+=== PAGE 74 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+. . . continued
+Header V alue Units Description
+HE_AG_BKG_MOD ‘n-order 2d-polynomial’ – Bkg model for He-I airglow
+HE_AG_BKG_DEG 2 – n-order of bkg poly mod for He-I airglow
+HE_AG_BKG_COEFF ‘c0 0,c0 1,c0 2,c1 0,c1 1,c2 0’– He-I bkg mod coeff
+HE_AG_BKG_C0_0 0.745467 – He-I best-fit bkg model c0 0
+HE_AG_BKG_C0_1 −0.981728 – He-I best-fit bkg model c0 1
+HE_AG_BKG_C0_2 0.515161 – He-I best-fit bkg model c0 2
+HE_AG_BKG_C1_0 −4.9E-05 – He-I best-fit bkg model c1 0
+HE_AG_BKG_C1_1 6.8\1$ˆ{-05}$ – He-I best-fit bkg model c1 1
+HE_AG_BKG_C2_0 −0.0 – He-I best-fit bkg model c2 0
+AURORA_CORR 0.0 – Correl coeff with aurora template
+SHUTTLE_GLOW_CORR0.0 – Correl coeff with shuttle-glow template
+HE_AIRGLOW_CONT F – True for detectors 1 and 2, False otherwise
+SHUTTLE_GLOW_CONTF – True if SHUTTLE GLOW CORR>0.2
+AURORA_CONT F – True if AURORA CORR>0.2
+L2DQAFLG ‘Pass ’ – L2 DQA outcome
+L2.N_TRANSIENT 35114 – number of flagged flagged transient pixels
+L2.N_OVERFLOW 2709 – number of flagged overflow pixels
+L2.N_SUR_ERROR 22645 – number of flagged sur error pixels
+L2.N_NONFUNC 22468 – number of flagged nonfunctional pixels
+L2.N_DICHROIC 112375 – number of flagged pixels due to low effi-
+ciency
+L2.N_MISSING 0 – number of flagged pixels with missing data
+L2.N_FULLSAMPLE 240 – number of flagged full-sample pixels
+L2.N_PHANMISS 0 – number of flagged phanmiss pixels
+L2.N_SNOWBALL 692 – number of flagged snowball artifact pixels
+L2.N_BLOOM 1555 – number of flagged bloom artifact pixels
+L2.N_HALO 79233 – number of flagged transient halo pixels
+L2.N_SAT_HALO 0 – number of flagged streak halo pixels
+A_ORDER 3 – SIP polynomial order, axis 0, detector to sky
+A_0_0 0.481698797086 – SIP distortion coefficient
+A_0_1 −0.000666079270444 – SIP distortion coefficient
+A_0_2 −1.42891241405E-06 – SIP distortion coefficient
+A_0_3 −5.8912710055E-11 – SIP distortion coefficient
+A_1_0 −0.000342078143197 – SIP distortion coefficient
+A_1_1 4.23814367317\1$ˆ{-06}$ – SIP distortion coefficient
+A_1_2 6.42965612423\1$ˆ{-10}$ – SIP distortion coefficient
+A_2_0 −1.58704697621E-06 – SIP distortion coefficient
+A_2_1 −2.01592724458E-10 – SIP distortion coefficient
+A_3_0 5.90778148414\1$ˆ{-10}$ – SIP distortion coefficient
+B_ORDER 3 – SIP polynomial order, axis 1, detector to sky
+B_0_0 −1.14078669042 – SIP distortion coefficient
+B_0_1 −0.000584886219203 – SIP distortion coefficient
+B_0_2 1.91762345617\1$ˆ{-06}$ – SIP distortion coefficient
+B_0_3 3.87846110345\1$ˆ{-10}$ – SIP distortion coefficient
+B_1_0 −8.18453574726E-05 – SIP distortion coefficient
+B_1_1 −7.61577573871E-07 – SIP distortion coefficient
+B_1_2 −1.49882848608E-10 – SIP distortion coefficient
+B_2_0 6.76166519654\1$ˆ{-06}$ – SIP distortion coefficient
+B_2_1 6.82727563049\1$ˆ{-10}$ – SIP distortion coefficient
+B_3_0 −3.93615188176E-11 – SIP distortion coefficient
+AP_ORDER 3 – SIP polynomial order, axis 0, sky to detector
+continued . . .
+Caltech/IPAC SPHEREx Project Document Page 74 of 82

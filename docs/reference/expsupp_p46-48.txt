@@ -1,0 +1,143 @@
+=== PDF PAGE 46 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+3.4.6 Reprojection Algorithm
+The mosaic tool uses a histogram-based reprojection as its primary method (see Cukierman et al. [2026],
+Section 4 for details). This is implemented as an intensity-weighted 2D histogram of the image-pixel position.
+In this binning scheme, each input pixel contributes to only a single mosaic pixel.
+For each input image, the reprojection computes a mapping from input to output pixel coordinates:
+•Build input pixel grid: Create coordinate arrays (ix, iy) for each pixel in the input image
+•Input to Sky transform: Convert input pixel coordinates to sky coordinates (RA, Dec) using the input
+WCS
+•Sky to Output transform: Convert sky coordinates to output pixel coordinates using the output WCS
+•Nearest-neighbor assignment: Round output coordinates to the nearest integer pixel
+Mathematically, for input pixel (x in, yin):
+(RA, Dec) = WCSin.pixel to world(xin, yin)
+(xout, yout) = WCS out.world to pixel(RA, Dec)
+(iout, jout) = round(xout, yout)
+Values are accumulated using histogram binning with the python functionnp.bincount:
+accumulator[jout, iout]+ = data[yin, xin]
+nhits[jout, iout]+ = 1
+The final mosaic is the weighted average:
+mosaic = accumulator/nhits (where nhits>0)
+mosaic = NaN (where nhits = 0)
+where nhits is the number of contributing input pixels per output mosaic pixel.
+The properties of the adopted reprojection algorithm are:
+•Speed: O(N) complexity, fast for large images
+•No smoothing: Each input pixel contributes to exactly one output pixel
+•Integer hit counts: NHITS is always an integer pixel count
+•No noise correlation: Independent pixel assignments
+•Presence of gaps: Some output pixels may have no input data if coverage is sparse
+This method is equivalent to the ”pixel binning” approach described in Cukierman et al. [2026].
+3.4.7 Mosaic building process
+The mosaic builder uses a file-centric optimization: each L2 file is opened once, and all spectral channels are
+processed before moving to the next file. This reduces file I/O by a factor of 17x compared to processing
+one channel at a time.
+For each spectral channel, the accumulation proceeds as:
+Initialize:
+acc_data[ny, nx] = 0 # Weighted sum accumulator
+nhits[ny, nx] = 0 # Hit count
+acc_flags[ny, nx] = 0 # Bitwise OR of flags
+Caltech/IPAC SPHEREx Project Document Page 46 of 82
+=== PDF PAGE 47 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+For each L2 file:
+Load image and flags
+Apply bad pixel mask (set bad pixels to NaN)
+Extract pixels within a spectral channel mask
+Compute pixel mapping (input to output)
+For each valid (non-NaN) pixel:
+acc_data[j_out, i_out] += value
+nhits[j_out, i_out] += 1
+For each pixel (including NaN):
+acc_flags[j_out, i_out] |= propagated_flags
+Finalize:
+mosaic = acc_data / nhits (where nhits > 0)
+The accumulation kernel is implemented using Numba’s JIT (just in time) compilation for native perfor-
+mance, running outside Python’s Global Interpreter Lock to enable multi-threaded file loading.
+3.4.8 Output File
+The individual channel mosaics are combined into a 3-dimensional spectral cube in FITS format with the
+following extensions:
+Extension Content Shape Description
+PRIMARY - - Version metadata
+IMAGE 3D cube (N, ny, nx) Stacked mosaics (MJy/sr)
+NHITS 3D cube (N, ny, nx) Number of contributing input pixels per mosaic pixel
+FLAGS 3D cube (N, ny, nx) bitwise OR of flags propagated from contributing input pixels
+SPECTRAL CHANNELS Table N rows Per-channel metadata
+WCS-W A VE Table 1 row Spectral WCS lookup
+The SPECTRAL CHANNELS binary table contains:
+•DETECTOR: Array number
+•SUBCHAN: Subchannel number
+•W A VELENGTH: Pre-calculated wavelength (µm) from spectral channels file provided by instrument
+team
+•WL MIN, WL MAX: Pre-calculated wavelength range (µm) from spectral channels file provided by
+instrument team
+•BANDWIDTH: Pre-calculated bandwidth (µm) from spectral channels file provided by instrument
+team
+•R, R STD: Pre-calculated resolving power statistics from spectral channels file provided by instrument
+team
+The cube uses the FITS -TAB algorithm for tabular spectral coordinates. This allows non-uniform
+wavelength sampling to be accurately represented:
+•Axis 3 (W A VE-TAB): Wavelength lookup from WCS-W A VE table
+•Axis 4 (W A VE-TAB): Bandwidth lookup from WCS-W A VE table
+The WCS has 4 world axes (RA, Dec, wavelength, bandwidth) even though the image has only 3 pixel axes.
+Caltech/IPAC SPHEREx Project Document Page 47 of 82
+=== PDF PAGE 48 ===
+SSDC Data Product Specification
+SPHEREx Explanatory Supplement
+SSDC–DP–017
+Version 2.0, 2026-08-25
+3.4.9 Data Quality and Flagging
+Bad pixels are identified by quality flags in the L2 input data, see Sect. 3.4.3 for the list of flags considered
+as bad by the mosaic algorithms. Pixels with bad flags are:
+•Set to NaN before reprojection
+•Excluded from accumulation (do not contribute to the weighted average)
+•Not included in the NHITS counter
+This ensures that bad pixels do not contaminate the final mosaic values.
+Selected flags (OVERFLOW, SOURCE, OUTLIER) are propagated to the output using bitwise OR:
+output_flags[j, i] = input1_flags | input2_flags | ... | inputN_flags
+This preserves information about which output pixels may be affected by saturated pixels, point sources,
+or outliers from any contributing input image.
+The FLAGS extension header includes MP <FLAG NAME>keywords defining the bit position of each
+propagated flag, following the IPAC Firefly visualization convention (needs reference)
+3.4.10 Known Issues
+There are several visual artifacts that occur in the output images, mainly due to the spectral sampling of
+the L VF (Sect. 2.2).
+Striping from Airglow Emission Lines: As described in Sect. 2.3, there are several atmospheric
+emission feasures that can be seen in SPHEREx data. These airglow emission features can create prominent
+stripe artifacts in SPHEREx mosaics. The most significant is the helium line at 1.083µm, which appears
+as a bright horizontal band across all band 1 images. Because the Linear Variable Filter maps wavelength
+to detector position, pixels sensitive to the airglow wavelength form a stripe pattern that follows the L VF
+contour geometry.
+When multiple exposures are combined into a mosaic, the airglow signal varies both temporally and
+spatially between observations. This variation creates scan-correlated banding patterns in the final mosaic,
+where the stripe orientation and intensity depend on the survey scan pattern and the time-varying airglow
+amplitude. Without mitigation, these stripes can severely contaminate the mosaic, potentially overwhelming
+faint astrophysical signals at these wavelengths.
+Striping from Extended Source Spectral F eatures: Extended sources with strong spectral features
+(emission lines, absorption bands) produce similar stripe artifacts. When an extended object has significant
+flux at a specific wavelength—such as Brackettαemission at 4.052µm in nebulae — the L VF causes this
+signal to appear as a horizontal stripe across the detector at the corresponding y-position.
+Because SPHEREx observes the same sky region at multiple spacecraft orientations, the stripe orientation
+rotates between observations. When these images are coadded, the stripes from different roll angles combine
+to create complex interference patterns. For sources with sharp spectral features, this can produce sawtooth
+or moir´ e-like artifacts that do not average down with increased coverage.
+The underlying cause is the entanglement of spatial and spectral information inherent to the L VF design:
+different parts of the field of view are observed at different wavelengths simultaneously, making it impossible
+to fully separate spatial structure from spectral features within a single exposure.
+Residual Artifacts from Incomplete L2 Masking: The L2 bad pixel masks may not capture all
+detector artifacts. The following known limitations apply:
+•Snowballs, blooming, and halo artifacts: Masking for these features was introduced starting with
+planning period 2025W51 1A (December 2025) and pipeline version 6.5. Quick Release 2 images from
+prior planning periods have these artifacts unmasked. All images will include this masking after the
+Year 1 data release.
+•Satellite streaks and crosstalk: Masking for satellite streaks is incomplete and crosstalk was not im-
+plemented in Quick Release 2 processing. All images will include this masking after the Year 1 data
+release.
+These unmasked artifacts propagate through the mosaic pipeline and appear in the final products.
+Caltech/IPAC SPHEREx Project Document Page 48 of 82
