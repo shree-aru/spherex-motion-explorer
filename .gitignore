@@ -1,11 +1,28 @@
+# Python & virtual environment
 .venv/
+env/
+venv/
 __pycache__/
-.pytest_cache/
 *.py[cod]
+*$py.class
+*.so
+
+# Testing & caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Astronomical / Data cutouts & local temp
 *.fits
 *.fits.gz
-.DS_Store
+
+# Environment & credentials
 .env
-cloudflared.exe
-hf_space_deploy/
-hf_space_gradio/
+*.pem
+*.key
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

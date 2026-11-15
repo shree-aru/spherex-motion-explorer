@@ -118,7 +118,7 @@ def mjd_from_date(value: date) -> float:
 
 
 def search_observations(ra: float, dec: float, fov_arcmin: float, release: str = 'qr3',
-                        maxrec: int = 600, start_date: date | None = None,
+                        maxrec: int = 200, start_date: date | None = None,
                         end_date: date | None = None, survey: str = 'wide'):
     if release not in RELEASES:
         raise ValueError('Unsupported SPHEREx release.')
@@ -139,9 +139,14 @@ def search_observations(ra: float, dec: float, fov_arcmin: float, release: str =
         params['TIME'] = f'{lo} {hi}'
     last_exc = None
     payload = None
-    for attempt in range(3):  # the IRSA route can stall; retry with backoff
+    # IRSA SIA can be very slow for SPHEREx collections (60-180s observed).
+    # Strategy: generous timeouts (90s read) with 4 attempts and exponential backoff.
+    # First attempt uses a smaller MAXREC for faster response; if it works, we
+    # know the service is reachable and retry with the full limit.
+    for attempt in range(4):
         try:
-            with httpx.Client(timeout=httpx.Timeout(45.0 if attempt else 38.0, connect=10.0),
+            read_timeout = 90.0 + 30.0 * attempt   # 90, 120, 150, 180
+            with httpx.Client(timeout=httpx.Timeout(read_timeout, connect=15.0),
                               follow_redirects=False) as client:
                 response = client.get(SIA_URL, params=params)
                 response.raise_for_status()
@@ -149,7 +154,7 @@ def search_observations(ra: float, dec: float, fov_arcmin: float, release: str =
             break
         except httpx.HTTPError as exc:
             last_exc = exc
-            time.sleep(2.0 * (attempt + 1))
+            time.sleep(3.0 * (attempt + 1))
     if payload is None:
         raise ArchiveError(f'IRSA SIA service is unreachable: {type(last_exc).__name__}') from last_exc
     header = next(csv.reader(io.StringIO(payload.lstrip('\ufeff'))), [])

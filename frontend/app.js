@@ -182,7 +182,7 @@ async function search(){
     }
   }catch(error){setQueryStatus(error.message,true);return;}
   state.release=$('releaseSelect').value;const {ra,dec,fov}=coord();
-  $('searchButton').disabled=true;setQueryStatus('Querying NASA/IPAC IRSA SIA v2…');
+  $('searchButton').disabled=true;setQueryStatus('Querying NASA/IPAC IRSA SIA v2… this may take 1–3 minutes when the archive is busy.');
   resetPair();state.allResults=[];state.observations=[];drawObservations();
   const params=new URLSearchParams({ra:String(ra),dec:String(dec),fov:String(fov),release:state.release,survey:$('surveySelect').value});
   if($('startDate').value)params.set('start_date',$('startDate').value);

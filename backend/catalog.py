@@ -60,9 +60,9 @@ def gaia_sources(ra: float, dec: float, radius_arcmin: float, limit: int = 300,
     )
     params = {'REQUEST': 'doQuery', 'LANG': 'ADQL', 'FORMAT': 'csv', 'QUERY': query}
     last_exc = None
-    for attempt in range(2):  # the IRSA route can stall; one retry
+    for attempt in range(3):  # the IRSA route can stall; retries with backoff
         try:
-            with httpx.Client(timeout=httpx.Timeout(60.0, connect=15.0), follow_redirects=False) as client:
+            with httpx.Client(timeout=httpx.Timeout(90.0, connect=15.0), follow_redirects=False) as client:
                 response = client.get(TAP_URL, params=params)
                 response.raise_for_status()
                 payload = response.text
