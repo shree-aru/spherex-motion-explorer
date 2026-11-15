@@ -8,3 +8,4 @@ __pycache__/
 .env
 cloudflared.exe
 hf_space_deploy/
+hf_space_gradio/
