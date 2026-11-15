@@ -27,6 +27,13 @@ An open-source scientific research workbench designed to query, register, and vi
 
 ---
 
+## 📊 Presentation Deck
+
+* **PDF Presentation:** [docs/QoreX_SpaceApps_Demo.pdf](docs/QoreX_SpaceApps_Demo.pdf)
+* **PowerPoint Slides:** [docs/QoreX_SpaceApps_Demo.pptx](docs/QoreX_SpaceApps_Demo.pptx)
+
+---
+
 ## 🚀 Key Features
 
 | Capability | Description |
