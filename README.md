@@ -2,11 +2,15 @@
 
 **Time-Domain Observational Astronomy Workbench for NASA's SPHEREx Archive**
 
+[![Live Demo](https://img.shields.io/badge/🌐%20Live%20App-44.239.210.28-brightgreen?style=for-the-badge)](http://44.239.210.28/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![Astropy](https://img.shields.io/badge/Astropy-6.0+-orange.svg)](https://www.astropy.org/)
 [![Tests](https://img.shields.io/badge/tests-29%20passed-brightgreen.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> 🚀 **Live Interactive Web App:** **[http://44.239.210.28/](http://44.239.210.28/)**  
+> *Free, publicly accessible, and instant. No login, password, or local installation required — open directly in any browser to query live NASA/IPAC SPHEREx observations.*
 
 An open-source scientific research workbench designed to query, register, and visualize time-domain celestial motion and infrared variability using public data from NASA's **SPHEREx** mission (*Spectro-Photometer for the History of the Universe, Epoch of Reionization and Ices Explorer*).
 
@@ -52,7 +56,17 @@ An open-source scientific research workbench designed to query, register, and vi
 
 ## ⚡ Quick Start
 
-### Option 1: Windows (One-Click Launch)
+### 🌐 Option 1: Live Web App (Instant Access / Zero Setup)
+
+For judges, researchers, and users who want to try the workbench immediately without installing anything:
+👉 **[http://44.239.210.28/](http://44.239.210.28/)**
+
+* Hosted on AWS EC2 (always warm, no cold boot delays).
+* Publicly accessible, no account or credentials needed.
+
+---
+
+### 💻 Option 2: Windows (One-Click Local Launch)
 
 1. Make sure [Python 3.11 or 3.12](https://www.python.org/downloads/) is installed (ensure **"Add Python to PATH"** was checked during installation).
 2. Double-click **`run_windows.bat`**.
@@ -61,7 +75,7 @@ An open-source scientific research workbench designed to query, register, and vi
    - Install required dependencies
    - Open your browser to **`http://127.0.0.1:8000`**
 
-### Option 2: Linux / macOS
+### 🐧 Option 3: Linux / macOS
 
 Run the shell script:
 ```bash
@@ -83,7 +97,7 @@ python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
 ```
 Open **`http://127.0.0.1:8000`** in your browser.
 
-### Option 3: Docker Deployment
+### 🐳 Option 4: Docker Deployment
 
 Deploy anywhere with Docker (e.g., local, AWS, GCP, Fly.io, Hugging Face Spaces):
 ```bash
