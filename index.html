@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QoreX — SPHEREx Motion Workbench</title>
+<meta name="description" content="QoreX blinks the sky: a citizen-science motion workbench for live NASA/IPAC SPHEREx Quick Release data — built for the search for Planet X. NASA Space Apps Challenge 2026.">
+<style>
+  :root{
+    --red:#C8102E; --ink:#111111; --dark:#0B0B0D; --paper:#F5F5F3;
+    --mut:#6A6A6A; --tint:#FBECEE; --hair:#E0E0E0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:#fff;line-height:1.5}
+  .mono{font-family:Consolas,Menlo,"Courier New",monospace}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+
+  /* hero */
+  .hero{background:var(--dark);color:var(--paper);padding:64px 0 56px}
+  .hero .wrap{display:flex;gap:40px;align-items:center;flex-wrap:wrap}
+  .kick{font-size:13px;letter-spacing:.22em;color:#9C9C9C}
+  .hero h1{font-family:"Arial Black",Arial,sans-serif;font-size:76px;letter-spacing:.04em;margin:10px 0 2px}
+  .hero .sub{color:var(--red);font-size:15px;letter-spacing:.3em;font-weight:bold}
+  .hero p.tag{font-size:17px;max-width:560px;margin:16px 0 26px;color:#D9D9D9}
+  .reticle{flex:0 0 240px;margin:0 auto}
+  .btns{display:flex;gap:14px;flex-wrap:wrap}
+  .btn{display:inline-block;padding:12px 22px;font-size:14px;font-weight:bold;text-decoration:none;letter-spacing:.06em;border:1.5px solid var(--red)}
+  .btn.solid{background:var(--red);color:#fff}
+  .btn.line{color:#fff}
+  .btn.ghost{border-color:#fff;color:#fff}
+  .btn:hover{opacity:.85}
+
+  /* numbers */
+  .nums{border-bottom:1px solid var(--hair);padding:34px 0}
+  .nums .wrap{display:flex;flex-wrap:wrap;gap:18px 0}
+  .num{flex:1 1 200px;min-width:190px}
+  .num b{display:block;font-family:"Arial Black",Arial,sans-serif;font-size:34px;color:var(--red)}
+  .num span{font-size:11.5px;letter-spacing:.08em;color:var(--ink);font-weight:bold}
+
+  section{padding:52px 0}
+  h2{font-family:"Arial Black",Arial,sans-serif;font-size:30px;margin-bottom:8px}
+  .lead{color:var(--mut);font-size:16.5px;max-width:840px;margin-bottom:26px}
+
+  .cols{display:flex;gap:36px;flex-wrap:wrap}
+  .cols>div{flex:1 1 400px}
+  .cols h3{font-size:15px;letter-spacing:.14em;color:var(--red);margin-bottom:8px}
+  .cols p{font-size:15px;color:#333}
+
+  .shots{display:flex;gap:26px;flex-wrap:wrap}
+  .shot{flex:1 1 420px;border:1px solid var(--hair)}
+  .shot img{width:100%;display:block}
+  .shot .cap{padding:14px 16px}
+  .shot .cap b{font-size:14.5px}
+  .shot .cap span{display:block;color:var(--mut);font-size:12.5px;margin-top:3px}
+
+  .steps{display:flex;gap:14px;flex-wrap:wrap;counter-reset:st}
+  .step{flex:1 1 180px;border:1px solid var(--red);padding:16px 15px}
+  .step b.n{font-family:"Arial Black",Arial,sans-serif;color:var(--red);font-size:20px}
+  .step b.t{display:block;font-size:14.5px;margin:4px 0 6px;letter-spacing:.1em}
+  .step p{font-size:12.5px;color:var(--mut)}
+
+  .honest{background:var(--tint);padding:26px 28px}
+  .honest b{font-size:16px}
+  .honest p{font-size:14px;color:#333;margin-top:6px}
+
+  .runs .mono{font-size:13px;color:var(--ink)}
+  .runs p{margin:6px 0}
+
+  footer{background:var(--dark);color:#BFBFBF;padding:36px 0;font-size:12.5px}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:14px 40px;justify-content:space-between}
+  footer a{color:#fff}
+  .si{color:#F6D4DA}
+  @media(max-width:720px){.hero h1{font-size:54px}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div style="flex:1 1 480px">
+      <div class="kick mono">NASA SPACE APPS CHALLENGE 2026 · CHALLENGE — PLANET X AND SPHEREx</div>
+      <h1>QOREX</h1>
+      <div class="sub mono">SPHEREx MOTION WORKBENCH</div>
+      <p class="tag">Blink the sky. Find what moves. A live window into NASA/IPAC SPHEREx Quick Release data — built for the search for Planet X.</p>
+      <div class="btns">
+        <a class="btn solid" href="https://github.com/shree-aru/spherex-motion-explorer">SOURCE ON GITHUB →</a>
+        <a class="btn ghost" href="https://github.com/shree-aru/spherex-motion-explorer/blob/master/docs/QoreX_SpaceApps_Demo.pdf">DEMO DECK (PDF)</a>
+      </div>
+    </div>
+    <svg class="reticle" viewBox="0 0 240 240" aria-label="Targeting reticle on Barnard's Star coordinates">
+      <circle cx="120" cy="120" r="72" fill="none" stroke="#C8102E" stroke-width="2.5"/>
+      <line x1="120" y1="30" x2="120" y2="56" stroke="#C8102E" stroke-width="2.5"/>
+      <line x1="120" y1="184" x2="120" y2="210" stroke="#C8102E" stroke-width="2.5"/>
+      <line x1="30" y1="120" x2="56" y2="120" stroke="#C8102E" stroke-width="2.5"/>
+      <line x1="184" y1="120" x2="210" y2="120" stroke="#C8102E" stroke-width="2.5"/>
+      <circle cx="120" cy="120" r="7" fill="#C8102E"/>
+      <text x="120" y="232" text-anchor="middle" fill="#9C9C9C" font-family="Consolas,monospace" font-size="11">RA 269.4528°  DEC +04.6856°</text>
+    </svg>
+  </div>
+</div>
+
+<div class="nums">
+  <div class="wrap">
+    <div class="num"><b>102</b><span class="mono">IR CHANNELS PER SKY PIXEL</span></div>
+    <div class="num"><b>2×/yr</b><span class="mono">FULL-SKY SURVEYS — MOTION BUILT IN</span></div>
+    <div class="num"><b>130</b><span class="mono">RECORDS · BARNARD'S STAR, LIVE</span></div>
+    <div class="num"><b>37</b><span class="mono">DAYS ON THE WIDEST A–B BASELINE</span></div>
+    <div class="num"><b>10.4″/yr</b><span class="mono">PROPER MOTION AUTO-FLAGGED</span></div>
+    <div class="num"><b>22/22</b><span class="mono">LIVE CHECKS · 5 TARGETS · 29 TESTS</span></div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <h2>Planet X hides in plain sight.</h2>
+    <p class="lead">A cold world hundreds of AU away barely glows — but it moves against the fixed stars. SPHEREx is the first all-sky infrared instrument built to catch exactly that signal, re-scanning the whole sky every six months. The data ships weekly from NASA/IPAC IRSA. What was missing was a motion workbench anyone could drive — the way WiseView let the public make hundreds of discoveries with WISE. QoreX closes that gap.</p>
+    <div class="cols">
+      <div>
+        <h3 class="mono">WHAT IT DOES</h3>
+        <p>Find every SPHEREx exposure at any sky position, fetch official FITS cutouts, mask pixels with the mission's flag-bit table, reproject epochs onto one shared sky grid — then blink, split, difference and sequence them on one brightness scale. A Gaia DR3 overlay, proper-motion-propagated to each observation epoch, separates known fast movers from unknown ones. On-the-fly 0.75–5 µm spectrophotometry with per-point errors. Evidence exports with dataset DOIs.</p>
+      </div>
+      <div>
+        <h3 class="mono">WHY IT MATTERS</h3>
+        <p>The next Planet X finder might not be an astronomer. It might be a student, a teacher, a curious coder blinking two real SPHEREx epochs. QoreX hands the public the comparator — verified live on all five challenge targets, including Barnard's Star flagged automatically at 10.4″/yr against a 37-day baseline of 130 real observations.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="shots">
+      <div class="shot">
+        <img src="assets/atlas.png" alt="QoreX reference sky atlas — SPHEREx fields over live AllWISE context imagery">
+        <div class="cap"><b>REFERENCE SKY ATLAS</b><span>SPHEREx fields over live AllWISE context — zoom out to the real sky.</span></div>
+      </div>
+      <div class="shot">
+        <img src="assets/gaia.png" alt="Gaia DR3 overlay on a real SPHEREx frame — Barnard's Star auto-flagged">
+        <div class="cap"><b>GAIA DR3 OVERLAY — MOVER FOUND</b><span>Barnard's Star auto-flagged at 10.4″/yr, epoch-propagated by proper motion.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:8px">
+  <div class="wrap">
+    <h2>One pipeline. Zero shortcuts.</h2>
+    <p class="lead">Every pixel traces back to IRSA — nothing simulated, nothing cached, nothing invented.</p>
+    <div class="steps">
+      <div class="step"><b class="n">01</b><b class="t">FIND</b><p>IRSA SIA v2 lists every SPHEREx exposure at your target — QR3, with QR2 fallback.</p></div>
+      <div class="step"><b class="n">02</b><b class="t">FETCH</b><p>Official cutout service delivers IMAGE, FLAGS, VARIANCE and WCS-WAVE FITS layers.</p></div>
+      <div class="step"><b class="n">03</b><b class="t">REGISTER</b><p>Bit-aware flag masking; every epoch reprojected to one shared sky grid.</p></div>
+      <div class="step"><b class="n">04</b><b class="t">COMPARE</b><p>Blink, split, B−A residual and 2–8 frame sequences on one brightness scale.</p></div>
+      <div class="step"><b class="n">05</b><b class="t">IDENTIFY</b><p>Gaia DR3 cross-match, live spectra, evidence JSON export with dataset DOIs.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:8px">
+  <div class="wrap">
+    <div class="honest">
+      <b>Honest science, engineered in.</b>
+      <p>Bit-exact SPHEREx flag masking per the official Explanatory Supplement. Empty results are explicit states — the tool never fabricates an image, an epoch, or a spectrum. Residual cues are labelled review aids, not detections. Every render carries IRSA provenance in its headers, and every session exports reproducible evidence with dataset DOIs (QR3: 10.26131/IRSA662).</p>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:8px">
+  <div class="wrap runs">
+    <h2>Run it yourself.</h2>
+    <p class="mono">WINDOWS&nbsp;&nbsp;— double-click <b>run_windows.bat</b> → http://127.0.0.1:8000</p>
+    <p class="mono">LINUX / macOS — <b>bash run_unix.sh</b></p>
+    <p class="mono">ANY CLOUD — <b>docker build -t qorex . && docker run -p 7860:7860 qorex</b></p>
+    <p style="margin-top:14px"><a class="btn line" style="color:var(--ink);border-color:var(--red)" href="https://github.com/shree-aru/spherex-motion-explorer">FULL SOURCE, TESTS &amp; DOCS ON GITHUB →</a></p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      TEAM QOREX — PLANET X AND SPHEREx · NASA SPACE APPS CHALLENGE 2026<br>
+      <span class="si mono">SI-ASSISTED BUILD (CODE · TEXT · DESIGN) — DISCLOSURE IN REPO</span>
+    </div>
+    <div>
+      DATA: <a href="https://irsa.ipac.caltech.edu/Missions/spherex.html">NASA/IPAC IRSA SPHEREx</a> ·
+      <a href="https://irsa.ipac.caltech.edu/Missions/gaia.html">Gaia DR3</a> ·
+      <a href="https://irsa.ipac.caltech.edu/Missions/wise.html">AllWISE</a> ·
+      <a href="https://aladin.cds.unistra.fr/AladinLite/doc/">Aladin Lite</a> · MIT License
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
